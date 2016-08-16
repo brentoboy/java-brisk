@@ -1,0 +1,17 @@
+# Ignore Mac DS_Store files
+.DS_Store
+
+# build artifacts
+build
+test-results
+
+# crap from intellij
+.idea
+*.iml
+out
+
+# crap from netbeans
+nbproject
+netbeans.xml
+nbbuild.xml
+manifest.mf
