@@ -140,7 +140,7 @@ public class HttpRequestParsingPump implements Runnable {
                     Thread.yield();
                     socket = parentPump.httpServerInstance.IncomingRequests.take();
                     if (socket != null) {
-                        context = new HttpContext(socket);
+                        context = new HttpContext(parentPump.httpServerInstance, socket);
                         context.Stats.RequestParserStarted = System.nanoTime();
                         parseRequest(context);
                     }
@@ -149,7 +149,7 @@ public class HttpRequestParsingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler.handle(ex, this.getClass().getName(), "run()", "parsing a request");
+                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "parsing a request");
                 }
                 finally {
                     if (context != null) {
