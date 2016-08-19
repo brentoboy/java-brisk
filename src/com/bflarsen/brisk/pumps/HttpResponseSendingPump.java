@@ -1,66 +1,152 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpContext;
+import com.bflarsen.brisk.HttpResponse;
 import com.bflarsen.brisk.HttpServer;
+
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class HttpResponseSendingPump implements Runnable {
 
-    public HttpResponseSendingPump(HttpServer serverInstance) {
+    private HttpServer httpServerInstance;
 
+    public HttpResponseSendingPump(HttpServer serverInstance) {
+        this.httpServerInstance = serverInstance;
     }
 
     @Override
     public void run() {
-
+        Worker[] workers = new Worker[8];
+        // spawn a bunch of workers
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = new Worker(this);
+            workers[i].start();
+        }
+        // wait for them to close
+        for (int i = 0; i < workers.length; i++) {
+            try {
+                workers[i].wait();
+            }
+            catch(Exception ex) {}
+        }
     }
 
+    public static void sendResponse(HttpContext context) {
+        if (context == null || context.RequestStream == null)
+            return;  // TODO: perhaps log this?
+
+        HttpResponse response = context.Response;
+        OutputStream stream = context.ResponseStream;
+        PrintWriter streamWriter = context.ResponseWriter;
+
+        byte[] bodyBytes = null;
+        try {
+            bodyBytes = response.getBodyBytes();
+        }
+        catch (Exception ex) {
+            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "getBodyBytes");
+        }
+        if (bodyBytes != null) {
+            response.setHeader("Content-Length", ((Integer)bodyBytes.length).toString());
+        }
+        else {
+            Long length = response.getContentLength();
+            if (length != null) {
+                response.setHeader("Content-Length", length.toString());
+            }
+        }
+
+        // send the first line ... something like this :  "HTTP/1.1 200 OK"
+        streamWriter.println(String.format(
+                "%s %d %s"
+                , response.getHttpVersion()
+                , response.getStatusCode()
+                , response.getStatusDescription()
+        ));
+
+        // send all the header lines ... something like this: "Header-Name: header-value"
+        for (Map.Entry<String, String> header : response.getHeaders().entrySet()) {
+            streamWriter.println(String.format(
+                    "%s: %s"
+                    , header.getKey()
+                    , header.getValue()
+            ));
+        }
+
+        // send a blank line signifying "</end headers>"
+        streamWriter.println("");
+        streamWriter.flush();
+
+        // record the time to first byte
+        context.Stats.SendBodyStarted = System.nanoTime();
+
+        // send body
+        if (bodyBytes != null) {
+            try {
+                stream.write(bodyBytes);
+            }
+            catch (Exception ex) {
+                context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "writing bodyBytes");
+            }
+        } else {
+            try {
+                response.sendBody(stream);
+            }
+            catch (Exception ex) {
+                context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
+            }
+        }
+        try {
+            stream.flush();
+        }
+        catch (Exception ex) {
+            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
+        }
+
+        context.Stats.SendBodyEnded = System.nanoTime();
+    }
+
+    private static class Worker extends Thread {
+        HttpResponseSendingPump parentPump;
+
+        Worker(HttpResponseSendingPump parent) {
+            this.parentPump = parent;
+        }
+
+        @Override
+        public void run() {
+            while (!parentPump.httpServerInstance.isClosing && !Thread.interrupted()) {
+                HttpContext context = null;
+                try {
+                    Thread.yield();
+                    context = parentPump.httpServerInstance.ResponseReady.take();
+                    context.ResponseStream = context.Socket.getOutputStream();
+                    context.ResponseWriter = new java.io.PrintWriter(context.Socket.getOutputStream(), true);
+                    context.Stats.ResponseSenderStarted = System.nanoTime();
+                    sendResponse(context);
+                }
+                catch (InterruptedException ex) {
+                    return;
+                }
+                catch (Exception ex) {
+                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                }
+                finally {
+                    if (context != null) {
+                        context.Stats.ResponseSenderEnded = System.nanoTime();
+                        parentPump.httpServerInstance.DoneSending.add(context);
+                    }
+                }
+            }
+        }
+    }
+
+
 /*
-
-var JavaException = require('libraries/exception.js');
-var Thread = require('libraries/thread.js');
-var Util = require('core/utilities.js');
-var Workflow = require('framework/workflow.js');
-
-module.exports = {
-	spawnWorkers: spawnWorkers,
-	sendResponse: sendResponse,
-	lookupStatusDescription: lookupStatusDescription,
-};
-
-function workerThread() {
-	while ( ! Thread.interrupted())
-	{
-		var context = null;
-		try {
-			Thread.yield();
-			context = Workflow.responseReady.take();
-			context.stats.responseSenderStarted = Util.getMoment();
-			context.responseStream = context.socket.getOutputStream();
-			context.responseWriter = new java.io.PrintWriter(context.responseStream, true);
-			sendResponse(context);
-		}
-		catch (ex if ex instanceof Thread.InterruptedException) {
-			return;
-		}
-		catch (ex if ex instanceof JavaException) {
-			console.log(JavaException.format(ex));
-		}
-		catch (e) {
-			console.log(e);
-			console.log(e.stack);
-		}
-		finally {
-			if (context) {
-				context.stats.responseSenderEnded = Util.getMoment();
-				Workflow.doneSending.add(context);
-			}
-		}
-	}
-}
-
-function spawnWorkers(count) {
-	count = count || 4;
-	Thread.spawn(workerThread, count);
-}
 
 function sendResponse(context) {
 	var response = context.response = context.response || {};
@@ -77,7 +163,7 @@ function sendResponse(context) {
 	response.headers["Content-Type"] = response.headers["Content-Type"] || "text/html; charset=UTF-8";
 	// probably depends
 	//   response.headers["Content-Encoding"] = response.headers["Content-Encoding"] || "utf-8";
-	// if they ask for persistant connections
+	// if they ask for persistent connections
 	//   response.headers["Connection"] = response.headers["Connection"] || "keep-alive";
 	response.headers["Cache-Control"] = response.headers["Cache-Control"] || "max-age=0";
 
@@ -129,39 +215,6 @@ function sendResponse(context) {
 	}
 	context.stats.ttlb = Util.getMoment();
 }
-
-function lookupStatusDescription(statusCode) {
-	return statusDescriptions[statusCode] || "Unknown Status";
-}
-
-var statusDescriptions = {
-	"200": "OK",
-	"201": "Created",
-	"202": "Accepted",
-	"204": "No Content",
-	"301": "Moved Permanently",
-	"302": "Found",
-	"304": "Not Modified",
-	"400": "Bad Request",
-	"401": "Unauthorized",
-	"402": "Payment Required",
-	"403": "Forbidden",
-	"404": "Not Found",
-	"405": "Method Not Allowed",
-	"406": "Not Acceptable",
-	"408": "Request Timeout",
-	"411": "Length Required",
-	"413": "Request Entity Too Large",
-	"414": "Request-URI Too Long",
-	"418": "I'm a teapot",
-	"500": "Internal Server Error",
-	"501": "Not Implemented",
-	"502": "Bad Gateway",
-	"503": "Service Unavailable",
-	"504": "Gateway Timeout",
-	"505": "HTTP Version Not Supported",
-};
-
 
 
 

@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequest {
+    public String Protocol = "http"; // unless we determine otherwise down the road
     public String Method;
     public String Resource;  // the entire requested resource, including the params part
     public String HttpVersion;
@@ -13,12 +14,23 @@ public class HttpRequest {
     public final Map<String, String> Headers = new HashMap<>();
 
     public Object getParam(String... keys) {
-        if (Params.containsKey(keys[0])) {
-            return Params.get(keys[0]);
+        Map<String, Object> map = Params;
+        Object value = null;
+        for(String key : keys) {
+            if (map.containsKey(key)) {
+                value = map.get(key);
+                if (value instanceof Map<?, ?>) {
+                    map = (Map<String, Object>) value;
+                }
+                else {
+                    break;
+                }
+            }
+            else {
+                return null;
+            }
         }
-        else {
-            return null;
-        }
+        return value;
     }
 
     public String getHeader(String key) {
@@ -28,5 +40,9 @@ public class HttpRequest {
         else {
             return null;
         }
+    }
+
+    public String getUrl() {
+        return Protocol + "://" + Host + Path;
     }
 }

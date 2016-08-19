@@ -2,14 +2,11 @@ package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.mocks.HttpServerMock;
-import com.bflarsen.brisk.responders.BaseResponder;
-import com.bflarsen.brisk.responses.JsonResponse;
 import org.junit.After;
 import org.junit.Before;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
-import java.util.regex.Pattern;
 
 public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
 
@@ -156,6 +153,7 @@ public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
         assertEquals("jimmy", context.Request.getParam("id", "up", "left", "7"));
         assertEquals("neutron", context.Request.getParam("id", "down", "right"));
         assertEquals("stuff", context.Request.getParam("x", "abc 123"));
+        assertNull(context.Request.getParam("id", "stuff", "whatnot"));
     }
 
 //            "should parse cookies":

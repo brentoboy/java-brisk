@@ -16,7 +16,7 @@ public abstract class HttpServer extends Thread {
     public int Port = 80;
     public final Map<Pattern, Class<? extends HttpResponder>> Routes = new HashMap<>();
     public Class<? extends HttpResponder> Error404Responder = DefaultError404Responder.class;
-    public Class<? extends HttpResponder> Error500Responder = DefaultError500Responder.class;
+    public Class<? extends ExceptionResponder> Error500Responder = DefaultError500Responder.class;
 
     public boolean isClosing = false;
     public final LinkedBlockingQueue<Socket> IncomingRequests = new LinkedBlockingQueue<>();

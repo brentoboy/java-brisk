@@ -1,10 +1,13 @@
 package com.bflarsen.brisk.responses;
 
-import java.io.Writer;
-
 public class RedirectResponse extends BaseResponse {
-    @Override
-    public void sendBody(Writer stream) {
 
+    public RedirectResponse() {
+        super(301);
+    }
+
+    @Override
+    public byte[] getBodyBytes() throws Exception {
+        return "Redirected".getBytes("UTF-8");
     }
 }

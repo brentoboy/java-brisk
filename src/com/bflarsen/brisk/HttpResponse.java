@@ -1,9 +1,20 @@
 package com.bflarsen.brisk;
 
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.Map;
 
 public interface HttpResponse {
-    int getStatusCode();
     void setHeader(String key, String value);
-    void send(Writer stream) throws Exception;
+
+    String getHttpVersion();
+    int getStatusCode();
+    String getStatusDescription();
+    Map<String, String> getHeaders();
+    byte[] getBodyBytes() throws Exception;
+
+    boolean hasBodySender();
+    Long getContentLength();
+    void sendBody(OutputStream stream) throws Exception;
 }

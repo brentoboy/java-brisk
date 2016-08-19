@@ -1,369 +1,81 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpContext;
+import com.bflarsen.brisk.HttpResponder;
 import com.bflarsen.brisk.HttpServer;
 
-public class HttpRequestRoutingPump implements Runnable {
-    public HttpRequestRoutingPump(HttpServer serverInstance) {
+import java.util.Map;
+import java.util.regex.Pattern;
 
+public class HttpRequestRoutingPump implements Runnable {
+
+    private HttpServer httpServerInstance;
+
+    public HttpRequestRoutingPump(HttpServer serverInstance) {
+        this.httpServerInstance = serverInstance;
     }
 
     @Override
     public void run() {
-
+        Worker[] workers = new Worker[8];
+        // spawn a bunch of workers
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = new Worker(this);
+            workers[i].start();
+        }
+        // wait for them to close
+        for (int i = 0; i < workers.length; i++) {
+            try {
+                workers[i].wait();
+            }
+            catch(Exception ex) {}
+        }
     }
-/*
 
-        System.out.println(Pattern.quote("/is/this/right?"));
-        Pattern regex = Pattern.compile(Pattern.quote("/is/this/right?"));
-        assertTrue(regex.matcher("/is/this/right?").matches());
-        assertFalse(regex.matcher("hmm/is/this/right?s").matches());
+    public static void chooseRoute(HttpContext context) {
+        for(Map.Entry<Pattern, Class<? extends HttpResponder>> route : context.Server.Routes.entrySet()) {
+            String url = context.Request.getUrl();
+            if (route.getKey().matcher(url).matches()) {
+                context.ResponderClass = route.getValue();
+                return;
+            }
+        }
+    }
 
+    private static class Worker extends Thread {
+        HttpRequestRoutingPump parentPump;
 
-var JavaException = require('libraries/exception.js');
-var Str = require('core/string.js');
-var List = require('core/list.js');
-var Dict = require('core/dictionary.js');
-var Regex = require('core/regularExpression.js');
-var Thread = require('libraries/thread.js');
-var Util = require('core/utilities.js');
-var Workflow = require('framework/workflow.js');
-var UrlPatterns = require('framework/urlPatterns.js');
+        Worker(HttpRequestRoutingPump parent) {
+            this.parentPump = parent;
+        }
 
-module.exports = {
-	spawnWorkers: spawnWorkers,
-	chooseAction: chooseAction,
-};
+        @Override
+        public void run() {
+            while (!parentPump.httpServerInstance.isClosing && !Thread.interrupted()) {
+                HttpContext context = null;
+                try {
+                    Thread.yield();
+                    context = parentPump.httpServerInstance.ParsedRequests.take();
+                    context.Stats.RequestRouterStarted = System.nanoTime();
+                    chooseRoute(context);
+                }
+                catch (InterruptedException ex) {
+                    return;
+                }
+                catch (Exception ex) {
+                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "choosing a route");
+                }
+                finally {
+                    if (context != null) {
+                        context.Stats.RequestRouterEnded = System.nanoTime();
+                        parentPump.httpServerInstance.RoutedRequests.add(context);
+                    }
+                }
+            }
+        }
+    }
 
-var sites = require('sites.js');
-var defaultSite;
-
-function byLength(a,b) {
-	return a.length - b.length;
-}
-function byLengthDescending(a,b) {
-	return b.length - a.length;
-}
-
-(function initSites()
-{
-	var i, site, routes;
-	var defaultSiteName = sites[0];
-
-	sites = List.sort(sites, byLengthDescending);
-
-	for (i = 0; i < sites.length; i++)
-	{
-		var site = sites[i];
-		var routes = tryRequire(site + "/routes.js");
-
-		if ( ! routes)
-		{
-			routes = {};
-			console.log("Site: '" + site + "' doesn't define any routes.\n\tRoute file should be located at:" + site + "/routes.js");
-		}
-
-		sites[i] = {
-			name: site,
-			routes: routes,
-		};
-
-		if (site == defaultSiteName)
-		{
-			defaultSite = sites[i];
-		}
-
-		routes._dev = routes._dev || "/dev/(path:theWidget)";
-		routes._ajax = routes._ajax || "/ajax/(path:theWidget)";
-
-		for(routeKey in routes)
-		{
-			if (Util.isStr(routes[routeKey]))
-			{
-				routes[routeKey] = {
-					action: routeKey,
-					pattern: routes[routeKey],
-				};
-			}
-			var route = routes[routeKey];
-
-			// if they defined a pattern instead of a regex, make a regex out of it
-			if (route.pattern && !route.regex)
-			{
-				route.regex = UrlPatterns.createRegex(route.pattern)
-			}
-
-			// if a route has no getUrl function create one for it
-			if (route.pattern && !route.getUrl)
-			{
-				route.getUrl = UrlPatterns.createBuilder(route.pattern)
-			}
-
-			if (route.pattern && !route.scrape)
-			{
-				route.scrape = UrlPatterns.createScraper(route.pattern)
-			}
-		}
-
-		if (!routes._static)
-		{
-			routes._static = {
-				regex: null,
-				action: "_static",
-				getUrl: function() {},
-				scrape: function() {},
-			};
-		}
-
-		if (!routes._404)
-		{
-			routes._404 = {
-				regex: null,
-				action: "_404",
-				getUrl: function() {},
-				scrape: function() {},
-			};
-		}
-	}
-}());
-
-
-
-function workerThread()
-{
-	while ( ! Thread.interrupted())
-	{
-		var context = null;
-		try
-		{
-			Thread.yield();
-			context = Workflow.parsedRequests.take();
-			context.stats.requestRouterStarted = Util.getMoment();
-			chooseAction(context);
-		}
-		catch (ex if ex instanceof Thread.InterruptedException)
-		{
-			return;
-		}
-		catch (ex if ex instanceof JavaException)
-		{
-			console.log(JavaException.format(ex));
-		}
-		catch (e)
-		{
-			console.log(e);
-			console.log(e.stack);
-		}
-		finally
-		{
-			if (context)
-			{
-				context.stats.requestRouterEnded = Util.getMoment();
-				Workflow.routedRequests.add(context);
-			}
-		}
-	}
-}
-
-function spawnWorkers(count)
-{
-	count = count || 4;
-	Thread.spawn(workerThread, count);
-}
-
-function chooseAction(context)
-{
-	var i, route, routeKey;
-
-	// first choose a website
-	context.site = defaultSite; // unless we find a match
-	List.each(sites, function(site) {
-		if (Str.endsWith(context.request.host, site.name))
-		{
-			context.site = site;
-			return List.Break;
-		}
-	});
-
-	// next choose a route
-	context.route = context.site.routes._static; // unless we find a match
-	Dict.each(context.site.routes, function(key, route) {
-		if (Regex.isMatch(route.regex, context.request.path))
-		{
-			context.route = route;
-			return List.Break;
-		}
-	});
-
-	// then choose an action
-	context.action = context.route.action;
-}
-
---------------tests
-var Assert = require('core/assert.js');
-var List = require('core/list.js');
-var Dict = require('core/dictionary.js');
-var Util = require('core/utilities.js');
-var RequestRouter = require("framework/requestRouter.js");
-
-exports.chooseSite = {
-	"should use the first site in sites.js when no match is found":
-	function testDefaultHostname() {
-		var hostnames = [
-			"localhost"
-			, "127.0.0.1"
-			, "192.168.0.1"
-			, "bla"
-		];
-
-		List.each(hostnames, function(hostname) {
-			var context = { request: { host: hostname, path: "/" } };
-			RequestRouter.chooseAction(context);
-			Assert.equals("bflarsen.org", context.site.name);
-		});
-	},
-
-	"should match sites based on request.host":
-	function testMatchingHosts() {
-		var hostnames = [
-			"bflarsen.org",
-			"gamanac.com",
-			"test.site",
-			"test2.test.site",
-		];
-
-		List.each(hostnames, function(hostname) {
-			var context = { request: { host: hostname, path: "/" } };
-			RequestRouter.chooseAction(context);
-			Assert.equals(hostname, context.site.name);
-		});
-	},
-
-	"should match subdomains to the parent domain when subdomain doesnt exist":
-	function testSubdomainDefaultToParentDomain() {
-		var targetDomains = {
-			"bflarsen.org": [
-				"bflarsen.org",
-				"www.bflarsen.org",
-				"dev.bflarsen.org",
-				"test.bflarsen.org",
-				"lots.of.subdomains.bflarsen.org",
-				"www4.bflarsen.org",
-			],
-			"gamanac.com": [
-				"gamanac.org",
-				"www.gamanac.org",
-				"dev.gamanac.org",
-				"test.gamanac.org",
-				"lots.of.subdomains.gamanac.org",
-				"www4.gamanac.org",
-			],
-			"test.site": [
-				"test.site",
-				"www.test.site",
-				"you-get-the-idea.test.site",
-			],
-			"test2.test.site": [
-				"test2.test.site",
-				"local.test2.test.site",
-				"dev.test2.test.site",
-			],
-		};
-
-		List.each(targetDomains.keys, function(targetDomain) {
-			List.each(targetDomains[targetDomain], function (hostname) {
-				var context = { request: { host: hostname, path: "/" } };
-				RequestRouter.chooseAction(context);
-				Assert.equals(targetDomain, context.site.name);
-			});
-		});
-	},
-
-	"should match subdomains to subdomain when it does exist":
-	function() {
-		// testing this behaviors is satisfied by the test2.test.site tests from the last test.
-	},
-};
-
-exports.chooseAction = {
-	"should find matches in the route table":
-	function testExistingRoutes() {
-		var sampleResources = {
-			"homePage": [
-				"/",
-			],
-			"itemListPage": [
-				"/items/list.html",
-			],
-			"itemPage": [
-				"/items/0.html",
-				"/items/1.html",
-				"/items/2.html",
-				"/items/99999.html",
-			],
-		};
-		Dict.each(sampleResources, function(targetAction, urls) {
-			List.each(urls, function (resource) {
-				var context = { request: { host: "test.site", path: resource } };
-				RequestRouter.chooseAction(context);
-				Assert.equals("test.site", context.site.name);
-				Assert.equals(targetAction, context.action);
-			});
-		});
-	},
-
-	"should default to _static when no match is found":
-	function testStatic()
-	{
-		var resources = [
-			"/non-existant-resource",
-			"/js/somefile.js",
-			"/img/my-ugly-mug.png",
-			"/img/animated.gif",
-			"/favicon.ico",
-		];
-		List.each(resources, function(resource) {
-			var context = { request: { host: "test.site", path: resource } };
-			RequestRouter.chooseAction(context);
-			Assert.equals("_static", context.route.action);
-		});
-	},
-
-	"magical _dev route should work":
-	function test_devRoute()
-	{
-		var resources = [
-			"/dev/some/widget",
-			"/dev/path/to/widget",
-			"/dev/widget-x",
-			"/dev/myWidget",
-		];
-		List.each(resources, function(resource) {
-			var context = { request: { host: "test.site", path: resource } };
-			RequestRouter.chooseAction(context);
-			Assert.equals("_dev", context.route.action);
-		});
-	},
-
-	"magical _ajax route should work":
-	function test_ajaxRoute()
-	{
-		var resources = [
-			"/ajax/some/widget",
-			"/ajax/path/to/widget",
-			"/ajax/widget-x",
-			"/ajax/myWidget",
-		];
-		List.each(resources, function(resource) {
-			var context = { request: { host: "test.site", path: resource } };
-			RequestRouter.chooseAction(context);
-			Assert.equals("_ajax", context.route.action);
-		});
-	},
-};
-
-
-
-
+    /*
 -------------- URL parser thing
 var commonPatterns = {
 	domain: "(https?:\\/\\/)?([\\da-z_\\.-]+)\\.([a-z\\.]{2,6})",
@@ -470,12 +182,6 @@ function createScraper(pattern)
 		return values;
 	}
 }
-
-module.exports = {
-	createRegex: createRegex,
-	createBuilder: createBuilder,
-	createScraper: createScraper,
-};
 
 
 */

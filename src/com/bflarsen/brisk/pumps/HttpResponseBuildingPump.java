@@ -1,71 +1,107 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpContext;
+import com.bflarsen.brisk.HttpResponder;
 import com.bflarsen.brisk.HttpServer;
+import com.bflarsen.brisk.responders.DefaultError404Responder;
+import com.bflarsen.brisk.responders.DefaultError500Responder;
+import com.bflarsen.brisk.responders.ExceptionResponder;
 
 public class HttpResponseBuildingPump implements Runnable {
-    public HttpResponseBuildingPump(HttpServer serverInstance) {
 
+    private HttpServer httpServerInstance;
+
+    public HttpResponseBuildingPump(HttpServer serverInstance) {
+        this.httpServerInstance = serverInstance;
     }
 
     @Override
     public void run() {
-
+        Worker[] workers = new Worker[8];
+        // spawn a bunch of workers
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = new Worker(this);
+            workers[i].start();
+        }
+        // wait for them to close
+        for (int i = 0; i < workers.length; i++) {
+            try {
+                workers[i].wait();
+            }
+            catch(Exception ex) {}
+        }
     }
+
+    public static void buildResponse(HttpContext context) {
+        if (context.ResponderClass == null) {
+            context.ResponderClass = context.Server.Error404Responder;
+        }
+        if (context.ResponderClass == null) {
+            context.ResponderClass = DefaultError404Responder.class;
+        }
+        try {
+            HttpResponder responder = context.ResponderClass.newInstance();
+            context.Response = responder.handleRequest(context);
+        }
+        catch(Exception ex) {
+            context.Server.ExceptionHandler(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.ResponderClass.getSimpleName());
+            context.ResponderException = ex;
+            Class<? extends ExceptionResponder> responderClass = context.Server.Error500Responder;
+            if (responderClass == null) {
+                responderClass = DefaultError500Responder.class;
+            }
+            try {
+                ExceptionResponder responder = responderClass.newInstance();
+                responder.setException(ex);
+                context.Response = responder.handleRequest(context);
+            }
+            catch (Exception ex2) {
+                context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an error response of type " + responderClass.getSimpleName());
+            }
+        }
+    }
+
+    private static class Worker extends Thread {
+        HttpResponseBuildingPump parentPump;
+
+        Worker(HttpResponseBuildingPump parent) {
+            this.parentPump = parent;
+        }
+
+        @Override
+        public void run() {
+            while (!parentPump.httpServerInstance.isClosing && !Thread.interrupted()) {
+                HttpContext context = null;
+                try {
+                    Thread.yield();
+                    context = parentPump.httpServerInstance.RoutedRequests.take();
+                    context.Stats.ResponseBuilderStarted = System.nanoTime();
+                    buildResponse(context);
+                }
+                catch (InterruptedException ex) {
+                    return;
+                }
+                catch (Exception ex) {
+                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                }
+                finally {
+                    if (context != null) {
+                        context.Stats.ResponseBuilderEnded = System.nanoTime();
+                        parentPump.httpServerInstance.ResponseReady.add(context);
+                    }
+                }
+            }
+        }
+    }
+
 
 /*
 
-var JavaException = require('libraries/exception.js');
-var JavaFileInputStream = Java.type('java.io.FileInputStream');
-var JavaPrintWriter = Java.type('java.io.PrintWriter');
-var JavaByteArray = Java.type("byte[]");
-var JavaFiles = Java.type('java.nio.file.Files');
-var JavaFile = Java.type('java.io.File');
-var Thread = require('libraries/thread.js');
-var Util = require('core/utilities.js');
-var Workflow = require('framework/workflow.js');
-
-module.exports = {
-	spawnWorkers: spawnWorkers,
-	buildResponse: buildResponse,
-};
-
-var fileCache = {};
-
-function workerThread() {
-	while ( ! Thread.interrupted())
-	{
-		var context = null;
-		try {
-			Thread.yield();
 			context = Workflow.routedRequests.take();
 			context.stats.responseBuilderStarted = Util.getMoment();
 			context.responseStream = context.socket.getOutputStream();
 			context.responseWriter = new JavaPrintWriter(context.responseStream, true);
 			buildResponse(context);
-		}
-		catch (ex if ex instanceof Thread.InterruptedException) {
-			return;
-		}
-		catch (ex if ex instanceof JavaException) {
-			console.log(JavaException.format(ex));
-		}
-		catch (e) {
-			console.log(e);
-			console.log(e.stack);
-		}
-		finally {
-			if (context) {
-				context.stats.responseBuilderEnded = Util.getMoment();
-				Workflow.responseReady.add(context);
-			}
-		}
-	}
-}
-
-function spawnWorkers(count) {
-	count = count || 4;
-	Thread.spawn(workerThread, count);
-}
 
 function buildResponse(context) {
 	var response = context.response = context.response || {};

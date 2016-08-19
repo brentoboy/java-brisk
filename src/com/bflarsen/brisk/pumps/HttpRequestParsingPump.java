@@ -7,10 +7,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 public class HttpRequestParsingPump implements Runnable {
 
     private HttpServer httpServerInstance;
+    private static Pattern paramWithSubscriptRegex = Pattern.compile("^.+\\[.+\\]$");
 
     public HttpRequestParsingPump(HttpServer serverInstance) {
         this.httpServerInstance = serverInstance;
@@ -69,25 +73,31 @@ public class HttpRequestParsingPump implements Runnable {
                     try {
                         String key = URLDecoder.decode(part.substring(0, pos), "UTF-8");
                         String value = URLDecoder.decode(part.substring(pos + 1), "UTF-8");
-//var paramWithSubscriptRegex = /^.+\[.+\]$/;
-//                            if (Regex.isMatch(paramWithSubscriptRegex, key))
-//                          {
-//                                pos = key.indexOf('[');
-//                                var baseKey = Str.slice(key, 0, pos);
-//                                var subKeys = Str.split(Str.slice(key, pos + 1, Str.length(key) - 1), "][");
-//                              var lastSubkey = subKeys.pop();
-//                                request.params[baseKey] = request.params[baseKey] || {};
-//                                var prop = request.params[baseKey];
-//                                List.each(subKeys, function(subkey) {
-//                              prop[subkey] = prop[subkey] || {};
-//                                prop = prop[subkey];
-//                            });
-//                                prop[lastSubkey] = value;
-//                          }
-//                            else
-//                            {
-                        context.Request.Params.put(key, value);
-//                          }
+                        if (paramWithSubscriptRegex.matcher(key).matches())
+                        {
+                            pos = key.indexOf('[');
+                            String baseKey = key.substring(0, pos);
+                            String[] subKeys = key.substring(pos + 1, key.length() - 1).split(Pattern.quote("]["));
+                            if (!context.Request.Params.containsKey(baseKey)
+                                    || ! (context.Request.Params.get(baseKey) instanceof Map<?, ?>)
+                            ) {
+                                context.Request.Params.put(baseKey, new HashMap<String, Object>());
+                            }
+                            Map<String, Object> prop = (Map<String, Object>) context.Request.Params.get(baseKey);
+                            for (int i = 0; i < subKeys.length - 1; i++) {
+                                if (!prop.containsKey(subKeys[i])
+                                        || !(prop.get(subKeys[i]) instanceof Map<?, ?>)
+                                ) {
+                                    prop.put(subKeys[i], new HashMap<String, Object>());
+                                }
+                                prop = (Map<String, Object>) prop.get(subKeys[i]);
+                            }
+                            prop.put(subKeys[subKeys.length - 1], value);
+                        }
+                        else
+                        {
+                            context.Request.Params.put(key, value);
+                        }
                     } catch (Exception ex) {
                         // HMM
                     }
