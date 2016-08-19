@@ -1,6 +1,17 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpServer;
+
 public class HttpContextCleanupPump implements Runnable {
+
+    public HttpContextCleanupPump(HttpServer serverInstance) {
+
+    }
+
+    @Override
+    public void run() {
+
+    }
 
 /*
 var JavaException = require('libraries/exception.js');

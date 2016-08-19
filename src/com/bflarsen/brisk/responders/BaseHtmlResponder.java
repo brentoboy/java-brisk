@@ -1,7 +1,15 @@
 package com.bflarsen.brisk.responders;
 
-/**
- * Created by brent on 8/18/2016.
- */
-public class BaseHtmlResponder {
+import com.bflarsen.brisk.HttpResponse;
+
+public class BaseHtmlResponder extends BaseResponder {
+    @Override
+    public HttpResponse respond() {
+        return null;
+    }
+
+    @Override
+    public HttpResponse respondToException(Exception ex) {
+        return null;
+    }
 }

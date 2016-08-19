@@ -7,7 +7,7 @@ public class ExampleServer extends HttpServer{
     public static void main(String[] args) throws Exception {
         ExampleServer server = new ExampleServer();
         server.Port = 8080;
-        server.Routes.put("/", IndexPageResponder.class);
+        server.addRoute("/", IndexPageResponder.class);
         server.run();
         server.wait();
     }

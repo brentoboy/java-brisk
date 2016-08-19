@@ -66,6 +66,51 @@ public abstract class HttpServer extends Thread {
         this.isClosing = true;
     }
 
+    public void addRoute(String path, Class<? extends HttpResponder> responderClass) throws Exception {
+        this.addRoute(buildRegexPattern(path), responderClass);
+    }
+
+    public void addRoute(Pattern regex, Class<? extends HttpResponder> responderClass) {
+        this.Routes.put(regex, responderClass);
+    }
+
+    public Pattern buildRegexPattern(String path) throws Exception {
+        String regexPattern;
+
+        // if it smells like a protocol relative path in the form of //domain.com/resource.html ...
+        if (path.startsWith("//")) {
+            final String[] pieces = path.split(Pattern.quote("*"));
+            for (int i = 0; i < pieces.length; i++) {
+                pieces[i] = Pattern.quote(pieces[i]);
+            }
+            path = String.join(".*", pieces);
+            regexPattern = "^(http|https)\\:" + path + "$";
+        }
+        // if it smells like its relative to site base
+        else if (path.startsWith("/")) {
+            final String[] pieces = path.split(Pattern.quote("*"));
+            for (int i = 0; i < pieces.length; i++) {
+                pieces[i] = Pattern.quote(pieces[i]);
+            }
+            path = String.join(".*", pieces);
+            regexPattern = "^(http|https)\\:\\/\\/[^\\/]+" + path + "$";
+        }
+        // if it smells like it has a protocol prefix
+        else if (path.startsWith("http://") || path.startsWith("https://")) {
+            final String[] pieces = path.split(Pattern.quote("*"));
+            for (int i = 0; i < pieces.length; i++) {
+                pieces[i] = Pattern.quote(pieces[i]);
+            }
+            path = String.join(".*", pieces);
+            regexPattern = "^" + path + "$";
+        }
+        else {
+            throw new Exception(String.format("'%s' is not in one of the expected formats", path));
+        }
+
+        return Pattern.compile(regexPattern);
+    }
+
     public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
 
     public abstract void LogHandler(String message);

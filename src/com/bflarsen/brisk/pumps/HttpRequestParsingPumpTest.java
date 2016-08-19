@@ -2,11 +2,14 @@ package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.mocks.HttpServerMock;
+import com.bflarsen.brisk.responders.BaseResponder;
+import com.bflarsen.brisk.responses.JsonResponse;
 import org.junit.After;
 import org.junit.Before;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
+import java.util.regex.Pattern;
 
 public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
 

@@ -1,7 +1,23 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpServer;
+
 public class HttpRequestRoutingPump implements Runnable {
+    public HttpRequestRoutingPump(HttpServer serverInstance) {
+
+    }
+
+    @Override
+    public void run() {
+
+    }
 /*
+
+        System.out.println(Pattern.quote("/is/this/right?"));
+        Pattern regex = Pattern.compile(Pattern.quote("/is/this/right?"));
+        assertTrue(regex.matcher("/is/this/right?").matches());
+        assertFalse(regex.matcher("hmm/is/this/right?s").matches());
+
 
 var JavaException = require('libraries/exception.js');
 var Str = require('core/string.js');

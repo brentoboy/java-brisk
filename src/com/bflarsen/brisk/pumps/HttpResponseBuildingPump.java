@@ -1,6 +1,16 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpServer;
+
 public class HttpResponseBuildingPump implements Runnable {
+    public HttpResponseBuildingPump(HttpServer serverInstance) {
+
+    }
+
+    @Override
+    public void run() {
+
+    }
 
 /*
 

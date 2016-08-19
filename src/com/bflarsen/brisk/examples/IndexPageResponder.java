@@ -1,7 +1,8 @@
 package com.bflarsen.brisk.examples;
 
-/**
- * Created by brent on 8/18/2016.
- */
+import com.bflarsen.brisk.responders.BaseHtmlResponder;
+
 public class IndexPageResponder extends BaseHtmlResponder {
+
+
 }

@@ -1,7 +1,10 @@
 package com.bflarsen.brisk.responses;
 
-/**
- * Created by brent on 8/18/2016.
- */
+import java.io.Writer;
+
 public class RedirectResponse extends BaseResponse {
+    @Override
+    public void sendBody(Writer stream) {
+
+    }
 }
