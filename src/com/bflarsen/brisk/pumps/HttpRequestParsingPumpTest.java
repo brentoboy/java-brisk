@@ -1,8 +1,7 @@
-package com.bflarsen.brisk.testing;
+package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpRequestParsingPump;
-import com.bflarsen.brisk.testing.MockServer;
+import com.bflarsen.brisk.mocks.HttpServerMock;
 import org.junit.After;
 import org.junit.Before;
 
@@ -11,11 +10,11 @@ import java.io.StringReader;
 
 public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
 
-    MockServer Server;
+    HttpServerMock Server;
 
     @Before
     public void setUp() {
-        Server = new MockServer();
+        Server = new HttpServerMock();
     }
 
     @After

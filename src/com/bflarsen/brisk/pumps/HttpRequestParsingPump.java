@@ -1,4 +1,7 @@
-package com.bflarsen.brisk;
+package com.bflarsen.brisk.pumps;
+
+import com.bflarsen.brisk.HttpContext;
+import com.bflarsen.brisk.HttpServer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,7 +11,6 @@ import java.net.URLDecoder;
 public class HttpRequestParsingPump implements Runnable {
 
     private HttpServer httpServerInstance;
-    private Worker[] workers;
 
     public HttpRequestParsingPump(HttpServer serverInstance) {
         this.httpServerInstance = serverInstance;
@@ -16,7 +18,7 @@ public class HttpRequestParsingPump implements Runnable {
 
     @Override
     public void run() {
-        workers = new Worker[8];
+        Worker[] workers = new Worker[8];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
@@ -67,6 +69,7 @@ public class HttpRequestParsingPump implements Runnable {
                     try {
                         String key = URLDecoder.decode(part.substring(0, pos), "UTF-8");
                         String value = URLDecoder.decode(part.substring(pos + 1), "UTF-8");
+//var paramWithSubscriptRegex = /^.+\[.+\]$/;
 //                            if (Regex.isMatch(paramWithSubscriptRegex, key))
 //                          {
 //                                pos = key.indexOf('[');
@@ -103,7 +106,7 @@ public class HttpRequestParsingPump implements Runnable {
 
                 if (context.Request.Headers.containsKey(key)) {
                     if (key.equals("Accept") || key.equals("Accept-Encoding")) {
-                        String oldValue = context.Request.Headers.get(key).toString();
+                        String oldValue = context.Request.Headers.get(key);
                         context.Request.Headers.put(key, oldValue + ", " + value);
                     }
                     // else:
@@ -119,7 +122,7 @@ public class HttpRequestParsingPump implements Runnable {
 
         // extract the "Host" header for easy access
         if (context.Request.Headers.containsKey("Host")) {
-            context.Request.Host = context.Request.Headers.get("Host").toString();
+            context.Request.Host = context.Request.Headers.get("Host");
         }
     }
 

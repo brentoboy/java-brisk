@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
+import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
 
 public abstract class HttpServer extends Thread {
@@ -19,15 +20,26 @@ public abstract class HttpServer extends Thread {
 
     public boolean isClosing = false;
     public final LinkedBlockingQueue<Socket> IncomingRequests = new LinkedBlockingQueue<>();
-    public final LinkedBlockingQueue<HttpContext> ParsedRequests = new LinkedBlockingQueue<>();
     public final LinkedBlockingQueue<HttpContext> AllRequests = new LinkedBlockingQueue<>();
+    public final LinkedBlockingQueue<HttpContext> ParsedRequests = new LinkedBlockingQueue<>();
+    public final LinkedBlockingQueue<HttpContext> RoutedRequests = new LinkedBlockingQueue<>();
+    public final LinkedBlockingQueue<HttpContext> ResponseReady = new LinkedBlockingQueue<>();
+    public final LinkedBlockingQueue<HttpContext> DoneSending = new LinkedBlockingQueue<>();
 
-    private final HttpRequestParsingPump RequestParsingPump = new HttpRequestParsingPump(this);
+    private final HttpRequestParsingPump RequestParser = new HttpRequestParsingPump(this);
+    private final HttpRequestRoutingPump RequestRouter = new HttpRequestRoutingPump(this);
+    private final HttpResponseBuildingPump ResponseBuilder = new HttpResponseBuildingPump(this);
+    private final HttpResponseSendingPump ResponseSender = new HttpResponseSendingPump(this);
+    private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
 
     @Override
     public void run() {
         this.isClosing = false;
-        this.RequestParsingPump.run();
+        this.RequestParser.run();
+        this.RequestRouter.run();
+        this.ResponseBuilder.run();
+        this.ResponseSender.run();
+        this.ContextCleanup.run();
 
         try (ServerSocket serverSocket = new ServerSocket(this.Port)) {
             this.LogHandler("Listening on Port " + this.Port);

@@ -1,11 +1,11 @@
-package com.bflarsen.brisk.testing;
+package com.bflarsen.brisk.mocks;
 
 import com.bflarsen.brisk.HttpServer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MockServer extends HttpServer {
+public class HttpServerMock extends HttpServer {
 
     public List<Exception> Exceptions = new ArrayList<>();
 
