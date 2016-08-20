@@ -4,8 +4,6 @@ import java.nio.charset.Charset;
 
 public abstract class HtmlResponse extends BaseResponse {
 
-    private static final Charset UTF8 = Charset.forName("UTF-8");
-
     protected HtmlResponse(int statusCode) {
         super(statusCode);
     }

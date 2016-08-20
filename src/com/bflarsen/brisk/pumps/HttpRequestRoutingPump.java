@@ -33,13 +33,15 @@ public class HttpRequestRoutingPump implements Runnable {
     }
 
     public static void chooseRoute(HttpContext context) {
+        String url = context.Request.getUrl();
         for(Map.Entry<Pattern, Class<? extends HttpResponder>> route : context.Server.Routes.entrySet()) {
-            String url = context.Request.getUrl();
             if (route.getKey().matcher(url).matches()) {
                 context.ResponderClass = route.getValue();
                 return;
             }
         }
+        context.Server.LogHandler("No route found to match: " + url);
+        context.ResponderClass = context.Server.Error404Responder;
     }
 
     private static class Worker extends Thread {

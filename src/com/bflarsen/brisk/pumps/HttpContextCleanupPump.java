@@ -1,132 +1,165 @@
 package com.bflarsen.brisk.pumps;
 
+import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.HttpServer;
 
 public class HttpContextCleanupPump implements Runnable {
 
-    public HttpContextCleanupPump(HttpServer serverInstance) {
+    private HttpServer httpServerInstance;
 
+    public HttpContextCleanupPump(HttpServer serverInstance) {
+        this.httpServerInstance = serverInstance;
     }
 
     @Override
     public void run() {
-
+        Thread[] workers = new Thread[8];
+        // spawn a bunch of workers
+        workers[0] = new CatchAllWorker(this);
+        workers[0].start();
+        for (int i = 1; i < workers.length; i++) {
+            workers[i] = new NormalWorker(this);
+            workers[i].start();
+        }
+        // wait for them to close
+        for (int i = 0; i < workers.length; i++) {
+            try {
+                workers[i].wait();
+            }
+            catch(Exception ex) {}
+        }
     }
 
+    public static void performCleanup(HttpContext context) {
+        if (context == null)
+            return;  // TODO: perhaps log this?
+
+        //TODO: what about persistent connections / keep-alive stuff?
+
+        if (context.RequestStream != null) {
+            try { context.RequestStream.close(); }
+            catch (Exception ex) {}
+        }
+        if (context.ResponseStream != null) {
+            try { context.ResponseStream.close(); }
+            catch (Exception ex) {}
+        }
+        if (context.Socket != null) {
+            try { context.Socket.close(); }
+            catch (Exception ex) {}
+        }
+
+        context.Stats.CompletelyFinished = System.nanoTime();
+        context.Stats.totalMs = Math.round((context.Stats.CompletelyFinished - context.Stats.RequestParserStarted) / 1000000);
+
+        // logging
+        if (context.Request.Resource != null && !context.Request.Resource.isEmpty()) {
+            context.Server.LogHandler(
+                    context.Request.Method
+                    + " " + context.Request.Protocol
+                    + " " + context.Request.Host
+                    + " " + context.Request.Resource
+            );
+            if (context.Stats.CompletelyFinished - context.Stats.RequestParserStarted > 5000000000L) { //5 seconds is long!
+                context.Server.LogHandler(
+                        "super long request/response cycle: "
+                        + Math.round((context.Stats.CompletelyFinished - context.Stats.RequestParserStarted) / 1000000) + "ms\t"
+                        + " " + context.Request.Method
+                        + " " + context.Request.Resource
+                );
+            }
+            if (context.Stats.SendBodyEnded == 0) {
+                context.Server.LogHandler(
+                        "No SendBodyEnded, that's really bad"
+                );
+            }
+        }
+    }
+
+    private static class NormalWorker extends Thread {
+        HttpContextCleanupPump parentPump;
+
+        NormalWorker(HttpContextCleanupPump parent) {
+            this.parentPump = parent;
+        }
+
+        @Override
+        public void run() {
+            while (!parentPump.httpServerInstance.isClosing && !Thread.interrupted()) {
+                HttpContext context = null;
+                try {
+                    Thread.yield();
+                    context = parentPump.httpServerInstance.DoneSending.take();
+                    context.Stats.CleanupStarted = System.nanoTime();
+                    performCleanup(context);
+                }
+                catch (InterruptedException ex) {
+                    return;
+                }
+                catch (Exception ex) {
+                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                }
+            }
+        }
+    }
+
+    private static class CatchAllWorker extends Thread {
+        HttpContextCleanupPump parentPump;
+
+        CatchAllWorker(HttpContextCleanupPump parent) {
+            this.parentPump = parent;
+        }
+
+        @Override
+        public void run() {
+            while (!parentPump.httpServerInstance.isClosing && !Thread.interrupted()) {
+                HttpContext nextContext = null;
+                HttpContext context = null;
+                long now = System.nanoTime();
+                long oldestAllowedStartTime = now - 6000000000L; // 60 seconds
+                try {
+                    Thread.sleep(100);
+                    // flush out everything that has already completed successfully
+                    nextContext = parentPump.httpServerInstance.AllRequests.peek();
+                    while (nextContext != null
+                            && nextContext.Stats.CompletelyFinished != 0
+                    ) {
+                        context = parentPump.httpServerInstance.AllRequests.take();
+                        if (context != nextContext) {
+                            parentPump.httpServerInstance.LogHandler("catchAll context != nextContext ... that's totally unexpected and means something is broken!");
+                        }
+                        nextContext = parentPump.httpServerInstance.AllRequests.peek();
+                    }
+
+                    while (nextContext != null
+                            && nextContext.Stats.RequestParserStarted > 0
+                            && nextContext.Stats.RequestParserStarted < oldestAllowedStartTime
+                    ) {
+                        context = parentPump.httpServerInstance.AllRequests.take();
+                        if (context != nextContext) {
+                            parentPump.httpServerInstance.LogHandler("catchAll context != nextContext ... that's totally unexpected and means something is broken!");
+                        }
+                        context.Stats.Expired = now;
+                        parentPump.httpServerInstance.DoneSending.add(context);
+                        parentPump.httpServerInstance.LogHandler("Response expired before cleanup");
+                        nextContext = parentPump.httpServerInstance.AllRequests.peek();
+                    }
+                }
+                catch (InterruptedException ex) {
+                    return;
+                }
+                catch (Exception ex) {
+                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                }
+            }
+        }
+    }
 /*
-var JavaException = require('libraries/exception.js');
-var Thread = require('libraries/thread.js');
-var Util = require('core/utilities.js');
-var Workflow = require('framework/workflow.js');
-
-module.exports = {
-	spawnWorkers: spawnWorkers,
-	performCleanup: performCleanup,
-}
-
-
-function workerThread() {
-	while ( ! Thread.interrupted())
-	{
-		var context = null;
-		try {
-			Thread.yield();
-			context = Workflow.doneSending.take();
-			context.stats.cleanupStarted = Util.getMoment();
-			performCleanup(context);
-		}
-		catch (ex if ex instanceof Thread.InterruptedException) {
-			return;
-		}
-		catch (ex if ex instanceof JavaException) {
-			console.log(JavaException.format(ex));
-		}
-		catch (e) {
-			console.log(e);
-			console.log(e.stack);
-		}
-		// we dont put it on a new queue, this context is done. it can be GC'd
-		//context.stats.cleanupEnded = Util.getMoment();
-	}
-}
-
-function catchAll() {
-	while ( ! Thread.interrupted()) {
-		var nextContext = null;
-		var context = null;
-		var now = Util.getMoment();
-		var oldestAllowedStartTime = now - (60 * 100000000); // 60 seconds ago
-		try {
-			Thread.sleep(500);
-
-			// flush out everything that has already completed successfully
-			nextContext = Workflow.allRequests.peek();
-			while (nextContext && nextContext.stats.completelyFinished) {
-				context = Workflow.allRequests.take();
-				if (context != nextContext) {
-					console.log("catchAll context != nextContext ... that's totally unexpected and means something is broken!");
-				}
-				context = null;
-				nextContext = Workflow.allRequests.peek();
-			}
-
-			while (nextContext && nextContext.stats.requestParserStarted < oldestAllowedStartTime) {
-				context = Workflow.allRequests.take();
-				if (context != nextContext) {
-					console.log("catchAll context != nextContext ... that's totally unexpected and means something is broken -2");
-				}
-				context.stats.expired = Workflow.now
-				Workflow.doneSending.add(context);
-				context = null;
-				console.log("request expired before cleanup!!!!");
-				nextContext = Workflow.allRequests.peek();
-			}
-		}
-		catch (ex if ex instanceof Thread.InterruptedException) {
-			return;
-		}
-		catch (ex if ex instanceof JavaException) {
-			console.log(JavaException.format(ex));
-		}
-		catch (e) {
-			console.log(e);
-			console.log(e.stack);
-		}
-	}
-}
-
-function spawnWorkers(count) {
-	count = count || 4;
-	Thread.spawn(workerThread, count);
-	Thread.spawn(catchAll, 1);
-}
 
 function performCleanup(context) {
 	if (context) {
 		//TODO: what about persistent connections / keep-alive stuff?
 
-		// resource cleanup
-		Util.close(
-			context.requestStream
-			, context.responseStream
-			, context.socket
-		);
-
-		context.stats.completelyFinished = Util.getMoment();
-		context.stats.totalMs = Math.round((context.stats.completelyFinished - context.stats.requestParserStarted) / 1000000);
-
-		// logging
-		context.request = context.request || {}
-
-		if (context.request && context.request.resource) {
-			console.log((context.request.method || "???") + " " + (context.request.resource || "???"));
-			if (context.stats.completelyFinished - context.stats.requestParserStarted > 5000000000) { //5 seconds is long!
-				console.log("super long request/response cycle: " + Math.round((context.stats.completelyFinished - context.stats.requestParserStarted) / 1000000) + "ms \t" + context.request.httpMethod + " " + context.request.resource);
-			}
-			if (!context.stats.ttlb) {
-				console.log("no ttlb - that's really bad");
-			}
-		}
 	}
 }
  */

@@ -51,5 +51,12 @@ public class HttpServerTest extends junit.framework.TestCase {
         assertFalse(regex.matcher("http://mydomain.com/s").matches());
         assertFalse(regex.matcher("httpx://mydomain.com/").matches());
         assertFalse(regex.matcher("http://my-domain.com/stuff.htmlstuff").matches());
+
+        regex = Server.buildRegexPattern("//*smartcaresystem.com/x");
+        assertTrue(regex.matcher("http://rs1.smartcaresystem.com/x").matches());
+        assertTrue(regex.matcher("http://local.smartcaresystem.com/x").matches());
+        assertTrue(regex.matcher("http://local-cloud.smartcaresystem.com/x").matches());
+        assertTrue(regex.matcher("https://local-cloud.smartcaresystem.com/x").matches());
+
     }
 }

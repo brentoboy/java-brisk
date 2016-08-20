@@ -3,7 +3,7 @@ package com.bflarsen.brisk;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
@@ -14,7 +14,7 @@ import com.bflarsen.brisk.responders.*;
 public abstract class HttpServer extends Thread {
 
     public int Port = 80;
-    public final Map<Pattern, Class<? extends HttpResponder>> Routes = new HashMap<>();
+    public final Map<Pattern, Class<? extends HttpResponder>> Routes = new LinkedHashMap<>();
     public Class<? extends HttpResponder> Error404Responder = DefaultError404Responder.class;
     public Class<? extends ExceptionResponder> Error500Responder = DefaultError500Responder.class;
 

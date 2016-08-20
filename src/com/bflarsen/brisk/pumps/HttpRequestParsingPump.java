@@ -50,9 +50,13 @@ public class HttpRequestParsingPump implements Runnable {
         }
     }
 
-    public static void parseRequest(HttpContext context) {
-        if (context == null || context.RequestStream == null)
-            return;  // TODO: perhaps log this?
+    public static void parseRequest(HttpContext context) throws Exception {
+        if (context == null)
+            throw new Exception("Empty Context object in parseRequest.");
+        if (context.Request == null)
+            throw new Exception("Empty Request object in parseRequest.");
+        if (context.RequestStream == null)
+            throw new Exception("Empty RequestStream object in parseRequest.");
 
         String line = tryReadLine(context.RequestStream);
         String[] parts = line.split(" ", 3);

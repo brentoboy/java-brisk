@@ -22,7 +22,7 @@ public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
         Server = null;
     }
 
-    private HttpContext parseHttpRequest(String requestString) {
+    private HttpContext parseHttpRequest(String requestString) throws Exception {
         HttpContext context = new HttpContext(Server);
         try {
             context.RequestStream = new BufferedReader(new StringReader(requestString));
@@ -103,7 +103,7 @@ public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
         assertEquals("GET", context.Request.Method);
     }
 
-    public void test_it_should_parse_out_url_params() {
+    public void test_it_should_parse_out_url_params() throws Exception {
         HttpContext context = parseHttpRequest(
                 "get /index.html?stuff=hi&no-stuff=&more_stuff=blablabla HTTP/1.0\r\n"
                 + "\r\n"
@@ -116,7 +116,7 @@ public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
         assertEquals(null, context.Request.getParam("stuff-not-even-sent"));
     }
 
-    public void test_it_should_properly_decode_encoded_url_params() {
+    public void test_it_should_properly_decode_encoded_url_params() throws Exception {
         HttpContext context = parseHttpRequest(
                 "get /?copy=brent%20%26%20patricia%20larsen&amp;trade%20mark=This%20Stuff%20is%20Trademarked! HTTP/1.0\r\n"
                 + "\r\n"

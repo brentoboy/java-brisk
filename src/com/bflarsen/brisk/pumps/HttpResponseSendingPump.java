@@ -35,13 +35,17 @@ public class HttpResponseSendingPump implements Runnable {
         }
     }
 
-    public static void sendResponse(HttpContext context) {
-        if (context == null || context.RequestStream == null)
-            return;  // TODO: perhaps log this?
+    public static void sendResponse(HttpContext context) throws Exception {
+        if (context == null)
+            throw new Exception("Empty Context object in sendResponse.");
+        if (context.Response == null)
+            throw new Exception("Empty Response object in sendResponse.");
+        if (context.RequestStream == null)
+            throw new Exception("Empty ResponseStream object in sendResponse.");
 
         HttpResponse response = context.Response;
         OutputStream stream = context.ResponseStream;
-        PrintWriter streamWriter = context.ResponseWriter;
+        PrintWriter streamWriter = new java.io.PrintWriter(stream, true);
 
         byte[] bodyBytes = null;
         try {
@@ -125,7 +129,6 @@ public class HttpResponseSendingPump implements Runnable {
                     Thread.yield();
                     context = parentPump.httpServerInstance.ResponseReady.take();
                     context.ResponseStream = context.Socket.getOutputStream();
-                    context.ResponseWriter = new java.io.PrintWriter(context.Socket.getOutputStream(), true);
                     context.Stats.ResponseSenderStarted = System.nanoTime();
                     sendResponse(context);
                 }

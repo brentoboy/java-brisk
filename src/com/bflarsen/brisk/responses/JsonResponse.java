@@ -1,6 +1,10 @@
 package com.bflarsen.brisk.responses;
 
+import com.google.gson.Gson;
+
 public class JsonResponse extends BaseResponse {
+
+    public final static Gson encoder = new Gson();
 
     public Object Payload;
 
@@ -13,7 +17,6 @@ public class JsonResponse extends BaseResponse {
 
     @Override
     public byte[] getBodyBytes() throws Exception {
-        // TODO: jsonify this
-        return this.Payload.toString().getBytes("UTF-8");
+        return encoder.toJson(this.Payload).getBytes(UTF8);
     }
 }

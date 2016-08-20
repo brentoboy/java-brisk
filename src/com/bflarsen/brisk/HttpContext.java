@@ -14,8 +14,7 @@ public class HttpContext {
     public Socket Socket;
     public Statistics Stats;
     public BufferedReader RequestStream;
-    public OutputStream ResponseStream; // for sending binary body
-    public PrintWriter ResponseWriter; // for sending headers and text based body
+    public OutputStream ResponseStream;
     public HttpRequest Request;
     public HttpResponse Response;
     public Class<? extends HttpResponder> ResponderClass;
@@ -32,6 +31,10 @@ public class HttpContext {
         public long ResponseSenderEnded;
         public long SendBodyStarted;
         public long SendBodyEnded;
+        public long CleanupStarted;
+        public long CompletelyFinished;
+        public long Expired;
+        public long totalMs;
     }
 
     public HttpContext(HttpServer server) {

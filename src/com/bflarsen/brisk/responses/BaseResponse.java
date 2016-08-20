@@ -3,6 +3,7 @@ package com.bflarsen.brisk.responses;
 import com.bflarsen.brisk.*;
 
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -10,14 +11,14 @@ public abstract class BaseResponse implements HttpResponse {
     public int StatusCode;
     public String StatusDescription;
     public String HttpVersion;
+    public Map<String, String> Headers = new LinkedHashMap<>();
 
+    public static final Charset UTF8 = Charset.forName("UTF-8");
     public static final SimpleDateFormat UtcFormatter = new SimpleDateFormat();
     static {
         UtcFormatter.setTimeZone(new SimpleTimeZone(0, "GMT"));
         UtcFormatter.applyPattern("dd MMM yyyy HH:mm:ss z");
     }
-
-    public Map<String, String> Headers = new LinkedHashMap<>();
 
     protected BaseResponse(int statusCode) {
         this.HttpVersion = "HTTP/1.1";
