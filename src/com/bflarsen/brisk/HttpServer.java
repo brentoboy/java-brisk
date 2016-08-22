@@ -1,8 +1,11 @@
 package com.bflarsen.brisk;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -10,13 +13,17 @@ import java.util.regex.Pattern;
 
 import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
+import com.bflarsen.convert.AutoConvert;
+import freemarker.template.Configuration;
+import freemarker.template.TemplateExceptionHandler;
 
 public abstract class HttpServer extends Thread {
 
     public int Port = 80;
-    public final Map<Pattern, Class<? extends HttpResponder>> Routes = new LinkedHashMap<>();
-    public Class<? extends HttpResponder> Error404Responder = DefaultError404Responder.class;
-    public Class<? extends ExceptionResponder> Error500Responder = DefaultError500Responder.class;
+    public final Map<Pattern, HttpResponder.Factory> Routes = new LinkedHashMap<>();
+
+    public HttpResponder.Factory Error404ResponderFactory = DefaultError404Responder::new;
+    public ExceptionResponder.Factory Error500ResponderFactory = DefaultError500Responder::new;
 
     public boolean isClosing = false;
     public final LinkedBlockingQueue<Socket> IncomingRequests = new LinkedBlockingQueue<>();
@@ -31,6 +38,13 @@ public abstract class HttpServer extends Thread {
     private final HttpResponseBuildingPump ResponseBuilder = new HttpResponseBuildingPump(this);
     private final HttpResponseSendingPump ResponseSender = new HttpResponseSendingPump(this);
     private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
+
+    public final AutoConvert AutoConverter = new AutoConvert();
+    public freemarker.template.Configuration ViewEngine;
+
+    public HttpServer() {
+        AutoConverter.ExceptionHandler = (ex) -> this.LogHandler(String.format("AutoConvert Error: %s", ex.getMessage()));
+    }
 
     @Override
     public void run() {
@@ -66,12 +80,20 @@ public abstract class HttpServer extends Thread {
         this.isClosing = true;
     }
 
-    public void addRoute(String path, Class<? extends HttpResponder> responderClass) throws Exception {
-        this.addRoute(buildRegexPattern(path), responderClass);
+    public void addRoute(String path, HttpResponder.Factory factory) throws Exception {
+        this.addRoute(buildRegexPattern(path), factory);
     }
 
-    public void addRoute(Pattern regex, Class<? extends HttpResponder> responderClass) {
-        this.Routes.put(regex, responderClass);
+    public void addRoute(Pattern regex, HttpResponder.Factory factory) {
+        this.Routes.put(regex, factory);
+    }
+
+    public void addRoute(String path, Class<? extends HttpResponder> cls) throws Exception {
+        this.addRoute(path, HttpResponder.createFactory(cls));
+    }
+
+    public void addRoute(Pattern regex, Class<? extends HttpResponder> cls) throws Exception {
+        this.Routes.put(regex, HttpResponder.createFactory(cls));
     }
 
     public Pattern buildRegexPattern(String path) throws Exception {
@@ -111,6 +133,21 @@ public abstract class HttpServer extends Thread {
         return Pattern.compile(regexPattern);
     }
 
+    public void addRouteToFiles(String pattern, String path) throws Exception {
+        addRouteToFiles(buildRegexPattern(pattern), path);
+    }
+
+    public void addRouteToFiles(Pattern pattern, String baseDirectory) throws Exception {
+        addRoute(pattern, StaticFileResponder.createFactory(Paths.get(baseDirectory)));
+    }
+
+    public void initViewEngine(Path templateFolder) throws Exception {
+        ViewEngine = new Configuration(Configuration.VERSION_2_3_25);
+        ViewEngine.setDirectoryForTemplateLoading(templateFolder.toFile());
+        ViewEngine.setDefaultEncoding("UTF-8");
+        ViewEngine.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
+        ViewEngine.setLogTemplateExceptions(false);
+    }
     public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
 
     public abstract void LogHandler(String message);

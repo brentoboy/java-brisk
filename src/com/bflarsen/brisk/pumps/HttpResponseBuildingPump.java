@@ -32,32 +32,21 @@ public class HttpResponseBuildingPump implements Runnable {
         }
     }
 
-    public static void buildResponse(HttpContext context) {
-        if (context.ResponderClass == null) {
-            context.ResponderClass = context.Server.Error404Responder;
-        }
-        if (context.ResponderClass == null) {
-            context.ResponderClass = DefaultError404Responder.class;
-        }
+    public static void buildResponse(HttpContext context) throws Exception {
+        if (context.Responder == null)
+            throw new Exception("Responder is null in buildResponse");
+
         try {
-            HttpResponder responder = context.ResponderClass.newInstance();
-            context.Response = responder.handleRequest(context);
+            context.Response = context.Responder.handleRequest(context);
         }
         catch(Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.ResponderClass.getSimpleName());
+            context.Server.ExceptionHandler(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.Responder.getClass().getSimpleName());
             context.ResponderException = ex;
-            Class<? extends ExceptionResponder> responderClass = context.Server.Error500Responder;
-            if (responderClass == null) {
-                responderClass = DefaultError500Responder.class;
+            ExceptionResponder responder = context.Server.Error500ResponderFactory.create();
+            if (responder == null) {
+                responder = new DefaultError500Responder();
             }
-            try {
-                ExceptionResponder responder = responderClass.newInstance();
-                responder.setException(ex);
-                context.Response = responder.handleRequest(context);
-            }
-            catch (Exception ex2) {
-                context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an error response of type " + responderClass.getSimpleName());
-            }
+            context.Response = responder.respondToException(ex, context);
         }
     }
 

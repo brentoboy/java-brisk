@@ -34,14 +34,18 @@ public class HttpRequestRoutingPump implements Runnable {
 
     public static void chooseRoute(HttpContext context) {
         String url = context.Request.getUrl();
-        for(Map.Entry<Pattern, Class<? extends HttpResponder>> route : context.Server.Routes.entrySet()) {
+        for(Map.Entry<Pattern, HttpResponder.Factory> route : context.Server.Routes.entrySet()) {
             if (route.getKey().matcher(url).matches()) {
-                context.ResponderClass = route.getValue();
-                return;
+                HttpResponder.Factory factory = route.getValue();
+                HttpResponder responder = factory.create();
+                if (responder.canHandle(context)) {
+                    context.Responder = responder;
+                    return;
+                }
             }
         }
         context.Server.LogHandler("No route found to match: " + url);
-        context.ResponderClass = context.Server.Error404Responder;
+        context.Responder = context.Server.Error404ResponderFactory.create();
     }
 
     private static class Worker extends Thread {

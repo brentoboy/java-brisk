@@ -16,8 +16,8 @@ public class HttpContext {
     public BufferedReader RequestStream;
     public OutputStream ResponseStream;
     public HttpRequest Request;
+    public HttpResponder Responder;
     public HttpResponse Response;
-    public Class<? extends HttpResponder> ResponderClass;
     public Exception ResponderException;
 
     public static class Statistics {

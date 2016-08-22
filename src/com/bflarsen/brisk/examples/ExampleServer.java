@@ -2,11 +2,14 @@ package com.bflarsen.brisk.examples;
 
 import com.bflarsen.brisk.HttpServer;
 
+import java.util.regex.Pattern;
+
 public class ExampleServer extends HttpServer{
 
     public static void main(String[] args) throws Exception {
         ExampleServer server = new ExampleServer();
         server.Port = 8080;
+        server.addRouteToFiles(Pattern.compile("^.*\\.(ico|txt|css|jpg|gif|jpeg)$"), "C:/code/java-brisk/static");
         server.addRoute("//*smartcaresystem.com*/", SpecialPageResponder.class);
         server.addRoute("/", IndexPageResponder.class);
         server.addRoute("/some.json", SomeJsonResponder.class);

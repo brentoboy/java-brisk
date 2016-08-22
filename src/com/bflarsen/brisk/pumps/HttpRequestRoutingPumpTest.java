@@ -10,11 +10,15 @@ import org.junit.Before;
 public class HttpRequestRoutingPumpTest extends junit.framework.TestCase {
     public static class IndexResponder implements HttpResponder {
         @Override
+        public boolean canHandle(HttpContext context) { return false; }
+        @Override
         public HttpResponse handleRequest(HttpContext context) {
             return null;
         }
     }
     public static class TestResponder implements HttpResponder {
+        @Override
+        public boolean canHandle(HttpContext context) { return false; }
         @Override
         public HttpResponse handleRequest(HttpContext context) {
             return null;
@@ -48,27 +52,27 @@ public class HttpRequestRoutingPumpTest extends junit.framework.TestCase {
         this.Context.Request.Host = "localhost";
         this.Context.Request.Path = "/index.html";
         HttpRequestRoutingPump.chooseRoute(this.Context);
-        assertNull(this.Context.ResponderClass);
+        assertNull(this.Context.Responder);
 
-        this.Context.ResponderClass = null;
+        this.Context.Responder = null;
         this.Context.Request.Protocol = "http";
         this.Context.Request.Host = "my.com";
         this.Context.Request.Path = "/";
         HttpRequestRoutingPump.chooseRoute(this.Context);
-        assertEquals(IndexResponder.class, this.Context.ResponderClass);
+        assertEquals(IndexResponder.class, this.Context.Responder.getClass());
 
-        this.Context.ResponderClass = null;
+        this.Context.Responder = null;
         this.Context.Request.Protocol = "http";
         this.Context.Request.Host = "my.domain.com";
         this.Context.Request.Path = "/test.html";
         HttpRequestRoutingPump.chooseRoute(this.Context);
-        assertEquals(TestResponder.class, this.Context.ResponderClass);
+        assertEquals(TestResponder.class, this.Context.Responder.getClass());
 
-        this.Context.ResponderClass = null;
+        this.Context.Responder = null;
         this.Context.Request.Protocol = "https";
         this.Context.Request.Host = "your.domain.com";
         this.Context.Request.Path = "/test.html";
         HttpRequestRoutingPump.chooseRoute(this.Context);
-        assertEquals(TestResponder.class, this.Context.ResponderClass);
+        assertEquals(TestResponder.class, this.Context.Responder.getClass());
     }
 }
