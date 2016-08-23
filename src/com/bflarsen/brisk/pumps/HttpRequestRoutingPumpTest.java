@@ -4,23 +4,21 @@ import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.HttpResponder;
 import com.bflarsen.brisk.HttpResponse;
 import com.bflarsen.brisk.mocks.HttpServerMock;
+import com.bflarsen.brisk.responders.BaseResponder;
+import com.bflarsen.brisk.responders.DefaultError404Responder;
 import org.junit.After;
 import org.junit.Before;
 
 public class HttpRequestRoutingPumpTest extends junit.framework.TestCase {
-    public static class IndexResponder implements HttpResponder {
+    public static class IndexResponder extends BaseResponder {
         @Override
-        public boolean canHandle(HttpContext context) { return false; }
-        @Override
-        public HttpResponse handleRequest(HttpContext context) {
+        public HttpResponse buildResponse() throws Exception {
             return null;
         }
     }
-    public static class TestResponder implements HttpResponder {
+    public static class TestResponder extends BaseResponder {
         @Override
-        public boolean canHandle(HttpContext context) { return false; }
-        @Override
-        public HttpResponse handleRequest(HttpContext context) {
+        public HttpResponse buildResponse() throws Exception {
             return null;
         }
     }
@@ -32,8 +30,8 @@ public class HttpRequestRoutingPumpTest extends junit.framework.TestCase {
     public void setUp() {
         Server = new HttpServerMock();
         try {
-            Server.addRoute("/", IndexResponder.class);
-            Server.addRoute("/test.html", TestResponder.class);
+            Server.addRoute("/", IndexResponder::new);
+            Server.addRoute("/test.html", TestResponder::new);
         }
         catch (Exception ex) {
             System.out.print(ex.toString());
@@ -52,7 +50,7 @@ public class HttpRequestRoutingPumpTest extends junit.framework.TestCase {
         this.Context.Request.Host = "localhost";
         this.Context.Request.Path = "/index.html";
         HttpRequestRoutingPump.chooseRoute(this.Context);
-        assertNull(this.Context.Responder);
+        assertEquals(DefaultError404Responder.class, this.Context.Responder.getClass());
 
         this.Context.Responder = null;
         this.Context.Request.Protocol = "http";

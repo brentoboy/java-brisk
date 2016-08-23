@@ -1,18 +1,8 @@
 package com.bflarsen.brisk;
 
 public interface HttpResponder {
-
-    interface Factory {
-        HttpResponder create();
-    }
-
-    static Factory createFactory(Class<? extends HttpResponder> cls) {
-        return () -> {
-            try { return cls.newInstance(); }
-            catch(Exception ex) { return null; }
-        };
-    }
+    interface Factory { HttpResponder create(); }
 
     boolean canHandle(HttpContext context);
-    HttpResponse handleRequest(HttpContext context);
+    HttpResponse respond(HttpContext context) throws Exception;
 }

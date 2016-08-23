@@ -1,13 +1,9 @@
 package com.bflarsen.brisk.responders;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpResponder;
-import com.bflarsen.brisk.HttpResponse;
+import com.bflarsen.brisk.*;
 import com.bflarsen.brisk.responses.FileResponse;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 
 public class StaticFileResponder implements HttpResponder {
 
@@ -23,6 +19,7 @@ public class StaticFileResponder implements HttpResponder {
 
         final Path baseFolder = path;
 
+        // TODO: you could have one instance handle all of these, and not create a new object instance every time.
         return () -> new StaticFileResponder(baseFolder);
     }
 
@@ -32,7 +29,8 @@ public class StaticFileResponder implements HttpResponder {
     }
 
     @Override
-    public HttpResponse handleRequest(HttpContext context) {
+    public HttpResponse respond(HttpContext context) throws Exception {
+        // TODO: send a NotModified Response when appropriate
         return new FileResponse(Paths.get(BasePath.toString(), context.Request.Resource));
     }
 }

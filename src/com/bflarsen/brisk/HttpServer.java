@@ -14,8 +14,6 @@ import java.util.regex.Pattern;
 import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
 import com.bflarsen.convert.AutoConvert;
-import freemarker.template.Configuration;
-import freemarker.template.TemplateExceptionHandler;
 
 public abstract class HttpServer extends Thread {
 
@@ -23,7 +21,7 @@ public abstract class HttpServer extends Thread {
     public final Map<Pattern, HttpResponder.Factory> Routes = new LinkedHashMap<>();
 
     public HttpResponder.Factory Error404ResponderFactory = DefaultError404Responder::new;
-    public ExceptionResponder.Factory Error500ResponderFactory = DefaultError500Responder::new;
+    public HttpResponder.Factory Error500ResponderFactory = DefaultError500Responder::new;
 
     public boolean isClosing = false;
     public final LinkedBlockingQueue<Socket> IncomingRequests = new LinkedBlockingQueue<>();
@@ -40,7 +38,7 @@ public abstract class HttpServer extends Thread {
     private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
 
     public final AutoConvert AutoConverter = new AutoConvert();
-    public freemarker.template.Configuration ViewEngine;
+    // public freemarker.template.Configuration ViewEngine;
 
     public HttpServer() {
         AutoConverter.ExceptionHandler = (ex) -> this.LogHandler(String.format("AutoConvert Error: %s", ex.getMessage()));
@@ -88,13 +86,13 @@ public abstract class HttpServer extends Thread {
         this.Routes.put(regex, factory);
     }
 
-    public void addRoute(String path, Class<? extends HttpResponder> cls) throws Exception {
-        this.addRoute(path, HttpResponder.createFactory(cls));
-    }
-
-    public void addRoute(Pattern regex, Class<? extends HttpResponder> cls) throws Exception {
-        this.Routes.put(regex, HttpResponder.createFactory(cls));
-    }
+//    public void addRoute(String path, Class<? extends HttpResponder> cls) throws Exception {
+//        this.addRoute(path, HttpResponder.createFactory(cls));
+//    }
+//
+//    public void addRoute(Pattern regex, Class<? extends HttpResponder> cls) throws Exception {
+//        this.Routes.put(regex, HttpResponder.createFactory(cls));
+//    }
 
     public Pattern buildRegexPattern(String path) throws Exception {
         String regexPattern;
@@ -141,13 +139,13 @@ public abstract class HttpServer extends Thread {
         addRoute(pattern, StaticFileResponder.createFactory(Paths.get(baseDirectory)));
     }
 
-    public void initViewEngine(Path templateFolder) throws Exception {
-        ViewEngine = new Configuration(Configuration.VERSION_2_3_25);
-        ViewEngine.setDirectoryForTemplateLoading(templateFolder.toFile());
-        ViewEngine.setDefaultEncoding("UTF-8");
-        ViewEngine.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
-        ViewEngine.setLogTemplateExceptions(false);
-    }
+//    public void initViewEngine(Path templateFolder) throws Exception {
+//        ViewEngine = new Configuration(Configuration.VERSION_2_3_25);
+//        ViewEngine.setDirectoryForTemplateLoading(templateFolder.toFile());
+//        ViewEngine.setDefaultEncoding("UTF-8");
+//        ViewEngine.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
+//        ViewEngine.setLogTemplateExceptions(false);
+//    }
     public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
 
     public abstract void LogHandler(String message);

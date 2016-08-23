@@ -5,7 +5,7 @@ import com.bflarsen.brisk.HttpResponder;
 import com.bflarsen.brisk.HttpServer;
 import com.bflarsen.brisk.responders.DefaultError404Responder;
 import com.bflarsen.brisk.responders.DefaultError500Responder;
-import com.bflarsen.brisk.responders.ExceptionResponder;
+
 
 public class HttpResponseBuildingPump implements Runnable {
 
@@ -37,16 +37,29 @@ public class HttpResponseBuildingPump implements Runnable {
             throw new Exception("Responder is null in buildResponse");
 
         try {
-            context.Response = context.Responder.handleRequest(context);
+            context.Response = context.Responder.respond(context);
         }
         catch(Exception ex) {
             context.Server.ExceptionHandler(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.Responder.getClass().getSimpleName());
             context.ResponderException = ex;
-            ExceptionResponder responder = context.Server.Error500ResponderFactory.create();
+            HttpResponder responder = context.Server.Error500ResponderFactory.create();
             if (responder == null) {
                 responder = new DefaultError500Responder();
             }
-            context.Response = responder.respondToException(ex, context);
+            try {
+                context.Response = responder.respond(context);
+            }
+            catch (Exception ex2) {
+                context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an exception response of type " + context.Responder.getClass().getSimpleName());
+                responder = new DefaultError500Responder();
+                try {
+                    context.Response = responder.respond(context);
+                }
+                catch (Exception ex3) {
+                    // yeah, ... about that.   I've got no more ideas
+                    context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build the default exception response.");
+                }
+            }
         }
     }
 
