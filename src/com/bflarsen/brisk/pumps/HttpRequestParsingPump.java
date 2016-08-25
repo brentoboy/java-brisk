@@ -59,6 +59,9 @@ public class HttpRequestParsingPump implements Runnable {
             throw new Exception("Empty RequestStream object in parseRequest.");
 
         String line = tryReadLine(context.RequestStream);
+        if (line == null || line.isEmpty()) {
+            throw new EmptyRequestException();
+        }
         String[] parts = line.split(" ", 3);
         context.Request.Method = (parts.length > 0) ? parts[0].toUpperCase() : "";
         context.Request.Resource = (parts.length > 1) ? parts[1] : "";
@@ -140,6 +143,7 @@ public class HttpRequestParsingPump implements Runnable {
         }
     }
 
+    public static class EmptyRequestException extends Exception {}
 
     private static class Worker extends Thread {
         HttpRequestParsingPump parentPump;
@@ -157,9 +161,23 @@ public class HttpRequestParsingPump implements Runnable {
                     Thread.yield();
                     socket = parentPump.httpServerInstance.IncomingRequests.take();
                     if (socket != null) {
+                        socket.setSoTimeout(5000);
                         context = new HttpContext(parentPump.httpServerInstance, socket);
                         context.Stats.RequestParserStarted = System.nanoTime();
-                        parseRequest(context);
+                        try {
+                            parseRequest(context);
+                        }
+                        catch (EmptyRequestException ex) {
+                            context.Stats.RequestParserAborted = System.nanoTime();
+                            context = null;
+                            socket.close();
+                            parentPump.httpServerInstance.LogHandler("Empty request, discarded");
+                        }
+//                        catch (takingTooLong ex) {
+//                            parentPump.httpServerInstance.IncomingRequests.put(socket);
+//                            context = null;
+//                            parentPump.httpServerInstance.LogHandler("initial socket read was taking too long, we recycled it");
+//                        }
                     }
                 }
                 catch (InterruptedException ex) {

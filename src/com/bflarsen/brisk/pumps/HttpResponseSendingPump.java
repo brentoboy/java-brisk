@@ -128,7 +128,7 @@ public class HttpResponseSendingPump implements Runnable {
                 try {
                     Thread.yield();
                     context = parentPump.httpServerInstance.ResponseReady.take();
-                    context.ResponseStream = context.Socket.getOutputStream();
+                    context.ResponseStream = new HttpContext.NoCloseOutputStream(context.Socket.getOutputStream());
                     context.Stats.ResponseSenderStarted = System.nanoTime();
                     sendResponse(context);
                 }

@@ -1,10 +1,7 @@
 package com.bflarsen.brisk;
 
 import javax.net.ssl.SSLSocket;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 
 public class HttpContext {
@@ -23,6 +20,7 @@ public class HttpContext {
     public static class Statistics {
         public long RequestParserStarted;
         public long RequestParserEnded;
+        public long RequestParserAborted;
         public long RequestRouterStarted;
         public long RequestRouterEnded;
         public long ResponseBuilderStarted;
@@ -47,9 +45,67 @@ public class HttpContext {
     public HttpContext(HttpServer server, Socket socket) throws Exception {
         this(server);
         this.Socket = socket;
-        this.RequestStream = new BufferedReader(new InputStreamReader(socket.getInputStream(), "utf-8"));
+        this.RequestStream = new BufferedReader(new InputStreamReader(new NoCloseInputStream(socket.getInputStream()), "utf-8"));
         if (socket instanceof SSLSocket) {
             this.Request.Protocol = "https";
         }
+    }
+
+    public static class NoCloseInputStream extends java.io.InputStream {
+        private java.io.InputStream wrapped;
+
+        public NoCloseInputStream(java.io.InputStream stream) { wrapped = stream; }
+
+        @Override
+        public int read() throws IOException { return wrapped.read(); }
+
+        @Override
+        public int read(byte b[]) throws IOException { return wrapped.read(b); }
+
+        @Override
+        public int read(byte b[], int off, int len) throws IOException { return wrapped.read(b, off, len); }
+
+        @Override
+        public long skip(long n) throws IOException { return wrapped.skip(n); }
+
+        @Override
+        public int available() throws IOException { return wrapped.available(); }
+
+        @Override
+        public synchronized void mark(int readlimit) { wrapped.mark(readlimit); }
+
+        @Override
+        public synchronized void reset() throws IOException { wrapped.reset(); }
+
+        @Override
+        public boolean markSupported() {
+            return wrapped.markSupported();
+        }
+
+        @Override
+        public void close() { /* don't wrap close, that's the whole point */ }
+    }
+
+    public static class NoCloseOutputStream extends java.io.OutputStream {
+
+        private java.io.OutputStream wrapped;
+
+        public NoCloseOutputStream(java.io.OutputStream stream) { wrapped = stream; }
+
+        @Override
+        public void write(int b) throws IOException { wrapped.write(b); }
+
+        @Override
+        public void write(byte b[]) throws IOException { wrapped.write(b); }
+
+        @Override
+        public void write(byte b[], int off, int len) throws IOException { wrapped.write(b, off, len); }
+
+        @Override
+        public void flush() throws IOException { wrapped.flush(); }
+
+        @Override
+        public void close() throws IOException { wrapped.flush(); flush(); /* don't wrap close, that's the whole point */ }
+
     }
 }

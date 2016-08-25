@@ -45,32 +45,39 @@ public class HttpContextCleanupPump implements Runnable {
             catch (Exception ex) {}
         }
         if (context.Socket != null) {
+//            if (! context.Socket.isClosed()) {
+//                try {
+//                    context.Server.IncomingRequests.put(context.Socket);
+//                    context.Socket = null;
+//                } catch (Exception ex) {}
+//            }
+//            else {
+//                context.Server.LogHandler("Socket already closed, no recycling");
+//            }
             try { context.Socket.close(); }
             catch (Exception ex) {}
         }
 
         context.Stats.CompletelyFinished = System.nanoTime();
-        context.Stats.totalMs = Math.round((context.Stats.CompletelyFinished - context.Stats.RequestParserStarted) / 1000000);
+        context.Stats.totalMs = (context.Stats.CompletelyFinished - context.Stats.RequestParserEnded) / 1000000;
 
         // logging
         if (context.Request.Resource != null && !context.Request.Resource.isEmpty()) {
             context.Server.LogHandler(
-                    context.Request.Method
+                    context.Stats.totalMs + "ms"
+                    + "\t" + context.Request.Method
                     + " " + context.Request.Protocol
                     + " " + context.Request.Host
                     + " " + context.Request.Resource
             );
-            if (context.Stats.CompletelyFinished - context.Stats.RequestParserStarted > 5000000000L) { //5 seconds is long!
+            if (context.Stats.totalMs > 5000000000L) { //5 seconds is long!
                 context.Server.LogHandler(
-                        "super long request/response cycle: "
-                        + Math.round((context.Stats.CompletelyFinished - context.Stats.RequestParserStarted) / 1000000) + "ms\t"
-                        + " " + context.Request.Method
-                        + " " + context.Request.Resource
+                        "\t\tsuper long request/response cycle"
                 );
             }
             if (context.Stats.SendBodyEnded == 0) {
                 context.Server.LogHandler(
-                        "No SendBodyEnded, that's really bad"
+                        "\t\tNo SendBodyEnded, that's really bad"
                 );
             }
         }
@@ -122,7 +129,7 @@ public class HttpContextCleanupPump implements Runnable {
                     // flush out everything that has already completed successfully
                     nextContext = parentPump.httpServerInstance.AllRequests.peek();
                     while (nextContext != null
-                            && nextContext.Stats.CompletelyFinished != 0
+                            && (nextContext.Stats.CompletelyFinished != 0 || nextContext.Stats.RequestParserAborted != 0)
                     ) {
                         context = parentPump.httpServerInstance.AllRequests.take();
                         if (context != nextContext) {
@@ -154,13 +161,4 @@ public class HttpContextCleanupPump implements Runnable {
             }
         }
     }
-/*
-
-function performCleanup(context) {
-	if (context) {
-		//TODO: what about persistent connections / keep-alive stuff?
-
-	}
-}
- */
 }
