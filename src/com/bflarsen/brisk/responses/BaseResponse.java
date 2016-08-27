@@ -294,17 +294,8 @@ public abstract class BaseResponse implements HttpResponse {
     }
 
     @Override
-    public boolean hasBodySender() {
-        return false;  // if you override sendBody, override this too, and return true
-    }
+    public abstract Long getContentLength() throws Exception;
 
     @Override
-    public Long getContentLength() {
-        return null; // if you override sendBody, you should override this
-    }
-
-    @Override
-    public void sendBody(OutputStream stream) throws Exception {
-        throw new Exception("Send Body Not Implemented for class: " + this.getClass().getName());
-    }
+    public abstract void sendBody(OutputStream stream) throws Exception;
 }

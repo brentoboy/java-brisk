@@ -121,7 +121,7 @@ function buildResponse(context) {
 			response.headers["Last-Modified"] = cachedVersion.lastModified;
 			response.headers["Expires"] =  in24Hours.toUTCString();
 			response.bodyBytes = cachedVersion.buffer;
-			//console.log("Using cache: " + context.request.resource);
+			//console.log("Using statCache: " + context.request.resource);
 		}
 		else
 		{
@@ -139,7 +139,7 @@ function buildResponse(context) {
 				response.headers["Expires"] =  in24Hours.toUTCString();
 
 				if (response.file.length() < 8196) {
-					//console.log("Adding to cache: " + context.request.resource);
+					//console.log("Adding to statCache: " + context.request.resource);
 					var buffer = JavaFiles.readAllBytes(file.toPath());
 					fileCache[context.request.resource] = {
 						contentType: response.headers["Content-Type"],

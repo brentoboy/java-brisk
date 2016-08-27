@@ -12,9 +12,7 @@ public interface HttpResponse {
     int getStatusCode();
     String getStatusDescription();
     Map<String, String> getHeaders();
-    byte[] getBodyBytes() throws Exception;
 
-    boolean hasBodySender();
-    Long getContentLength();
+    Long getContentLength() throws Exception;
     void sendBody(OutputStream stream) throws Exception;
 }

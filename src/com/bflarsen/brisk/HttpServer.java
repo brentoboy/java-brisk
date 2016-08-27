@@ -42,6 +42,8 @@ public abstract class HttpServer extends Thread {
     public String SessionDomain;
     public String SessionCookieName = "SessionID";
 
+    public final FileStatCache FileCache = new FileStatCache();
+
     public int NumberOfRequestParsingThreadsToCreate = 8;
     public int NumberOfRequestRoutingThreadsToCreate = 8;
     public int NumberOfResponseBuildingThreadsToCreate = 8;

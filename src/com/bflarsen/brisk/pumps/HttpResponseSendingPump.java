@@ -48,21 +48,9 @@ public class HttpResponseSendingPump implements Runnable {
         OutputStream stream = context.ResponseStream;
         PrintWriter streamWriter = new java.io.PrintWriter(stream, true);
 
-        byte[] bodyBytes = null;
-        try {
-            bodyBytes = response.getBodyBytes();
-        }
-        catch (Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "getBodyBytes");
-        }
-        if (bodyBytes != null) {
-            response.setHeader("Content-Length", ((Integer)bodyBytes.length).toString());
-        }
-        else {
-            Long length = response.getContentLength();
-            if (length != null) {
-                response.setHeader("Content-Length", length.toString());
-            }
+        Long length = response.getContentLength();
+        if (length != null) {
+            response.setHeader("Content-Length", length.toString());
         }
 
         // send the first line ... something like this :  "HTTP/1.1 200 OK"
@@ -95,21 +83,13 @@ public class HttpResponseSendingPump implements Runnable {
         context.Stats.SendBodyStarted = System.nanoTime();
 
         // send body
-        if (bodyBytes != null) {
-            try {
-                stream.write(bodyBytes);
-            }
-            catch (Exception ex) {
-                context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "writing bodyBytes");
-            }
-        } else {
-            try {
-                response.sendBody(stream);
-            }
-            catch (Exception ex) {
-                context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
-            }
+        try {
+            response.sendBody(stream);
         }
+        catch (Exception ex) {
+            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
+        }
+
         try {
             stream.flush();
         }

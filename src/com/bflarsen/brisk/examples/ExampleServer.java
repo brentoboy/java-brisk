@@ -15,6 +15,7 @@ public class ExampleServer extends HttpServer{
         server.addRoute("/", IndexPageResponder::new);
         server.addRoute("/some.json", SomeJsonResponder::new);
         server.addRoute("/bad.json", BadJsonResponder::new);
+        server.addRoute(Pattern.compile("^http\\:\\/\\/localhost.*\\/x\\/(?<age>\\d+).html$"), IndexPageResponder::new);
         server.run();
         server.wait();
     }

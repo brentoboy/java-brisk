@@ -2,7 +2,7 @@ package com.bflarsen.brisk.responses;
 
 import com.google.gson.Gson;
 
-public class JsonResponse extends BaseResponse {
+public class JsonResponse extends BaseBufferedResponse {
 
     public final static Gson encoder = new Gson();
 
@@ -12,7 +12,7 @@ public class JsonResponse extends BaseResponse {
         super(200);
         this.Payload = payload;
         this.setHeader("Content-Type", "application/json");
-        this.setHeader("Cache-Control", "no-cache, private, must-revalidate, s-maxage=0, max-age=0");
+        this.setHeader("Cache-Control", "no-statCache, private, must-revalidate, s-maxage=0, max-age=0");
     }
 
     @Override
