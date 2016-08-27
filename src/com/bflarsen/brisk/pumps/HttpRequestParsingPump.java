@@ -1,12 +1,14 @@
 package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
+import com.bflarsen.brisk.HttpCookie;
 import com.bflarsen.brisk.HttpServer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URLDecoder;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -22,7 +24,7 @@ public class HttpRequestParsingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfRequestParsingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
@@ -118,16 +120,23 @@ public class HttpRequestParsingPump implements Runnable {
             int pos = line.indexOf(':');
             if (pos != -1)
             {
-                String key = line.substring(0, pos);
+                String key = "Request_" + line.substring(0, pos).replace("-", "");
                 String value = line.substring(pos + 1).trim();
 
-                if (context.Request.Headers.containsKey(key)) {
-                    if (key.equals("Accept") || key.equals("Accept-Encoding")) {
+                if (key.equals("Request_Cookie")) {
+                    String[] allCookies = value.split(";");
+                    for (String cookie : allCookies) {
+                        int splitCookieAt = cookie.indexOf('=');
+                        String cookieName = cookie.substring(0, splitCookieAt).trim();
+                        String cookieValue = cookie.substring(splitCookieAt + 1).trim();
+                        context.Request.Cookies.put(cookieName, cookieValue);
+                    }
+                }
+                else if (context.Request.Headers.containsKey(key)) {
+                    if (key.equals("Request_Accept") || key.equals("Request_AcceptEncoding")) {
                         String oldValue = context.Request.Headers.get(key);
                         context.Request.Headers.put(key, oldValue + ", " + value);
                     }
-                    // else:
-                    // TODO: ?? console.log("key already exists, '" + key + "' with value '" + request.headers[key] + "'\nSo I dont want to overwrite it with " + value);
                 }
                 else {
                     context.Request.Headers.put(key, value);
@@ -138,9 +147,34 @@ public class HttpRequestParsingPump implements Runnable {
         }
 
         // extract the "Host" header for easy access
-        if (context.Request.Headers.containsKey("Host")) {
-            context.Request.Host = context.Request.Headers.get("Host");
+        if (context.Request.Headers.containsKey("Request_Host")) {
+            context.Request.Host = context.Request.Headers.get("Request_Host");
         }
+
+        // attach a session
+        if (context.Server.CreateSessions) {
+            String sessionID = context.Request.Cookies.get(context.Server.SessionCookieName);
+            if (sessionID != null) {
+                context.Session = context.Server.Sessions.get(sessionID);
+            }
+            else {
+                sessionID = java.util.UUID.randomUUID().toString().replace("-", "");
+            }
+            if (context.Session == null || context.Session.Expires < System.currentTimeMillis()) {
+                context.Session = context.Server.createSessionObject();
+                context.Session.UniqueID = sessionID;
+            }
+            context.Session.Expires = System.currentTimeMillis() + context.Server.SessionExpiresAfterMillis;
+            context.Server.Sessions.put(context.Session.UniqueID, context.Session);
+            // tell the browser to add (or update the expiration on) the session cookie
+            HttpCookie cookie = new HttpCookie(context.Server.SessionCookieName, context.Session.UniqueID);
+            cookie.Expires = context.Session.Expires;
+            cookie.Domain = context.Server.SessionDomain;
+            context.SendCookie(cookie);
+        }
+
+
+        // TODO: parse body
     }
 
     public static class EmptyRequestException extends Exception {}

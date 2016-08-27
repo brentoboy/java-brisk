@@ -3,6 +3,8 @@ package com.bflarsen.brisk;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HttpContext {
 
@@ -15,7 +17,9 @@ public class HttpContext {
     public HttpRequest Request;
     public HttpResponder Responder;
     public HttpResponse Response;
+    public HttpSession Session;
     public Exception ResponderException;
+    public List<HttpCookie> SendCookies = new ArrayList<>();
 
     public static class Statistics {
         public long RequestParserStarted;
@@ -49,6 +53,10 @@ public class HttpContext {
         if (socket instanceof SSLSocket) {
             this.Request.Protocol = "https";
         }
+    }
+
+    public void SendCookie(HttpCookie cookie) {
+        this.SendCookies.add(cookie);
     }
 
     public static class NoCloseInputStream extends java.io.InputStream {

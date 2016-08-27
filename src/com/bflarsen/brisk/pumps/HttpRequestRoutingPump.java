@@ -17,7 +17,7 @@ public class HttpRequestRoutingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfRequestRoutingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);

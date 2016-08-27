@@ -1,6 +1,7 @@
 package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
+import com.bflarsen.brisk.HttpCookie;
 import com.bflarsen.brisk.HttpResponse;
 import com.bflarsen.brisk.HttpServer;
 
@@ -20,7 +21,7 @@ public class HttpResponseSendingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfResponseSendingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
@@ -79,6 +80,11 @@ public class HttpResponseSendingPump implements Runnable {
                     , header.getKey()
                     , header.getValue()
             ));
+        }
+
+        // send the cookies
+        for (HttpCookie cookie : context.SendCookies) {
+            streamWriter.println(cookie.getResponseLine());
         }
 
         // send a blank line signifying "</end headers>"

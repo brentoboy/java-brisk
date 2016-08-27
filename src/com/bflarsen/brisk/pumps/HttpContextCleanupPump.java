@@ -13,7 +13,7 @@ public class HttpContextCleanupPump implements Runnable {
 
     @Override
     public void run() {
-        Thread[] workers = new Thread[8];
+        Thread[] workers = new Thread[httpServerInstance.NumberOfContextCleanupThreadsToCreate];
         // spawn a bunch of workers
         workers[0] = new CatchAllWorker(this);
         workers[0].start();

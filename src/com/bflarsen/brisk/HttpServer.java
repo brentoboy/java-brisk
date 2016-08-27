@@ -1,13 +1,12 @@
 package com.bflarsen.brisk;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
@@ -36,6 +35,18 @@ public abstract class HttpServer extends Thread {
     private final HttpResponseBuildingPump ResponseBuilder = new HttpResponseBuildingPump(this);
     private final HttpResponseSendingPump ResponseSender = new HttpResponseSendingPump(this);
     private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
+
+    public boolean CreateSessions = false;
+    public long SessionExpiresAfterMillis = 2 * 60 * 60 * 1000L; // 2 hours
+    public final Map<String, HttpSession> Sessions = new ConcurrentHashMap<>();
+    public String SessionDomain;
+    public String SessionCookieName = "SessionID";
+
+    public int NumberOfRequestParsingThreadsToCreate = 8;
+    public int NumberOfRequestRoutingThreadsToCreate = 8;
+    public int NumberOfResponseBuildingThreadsToCreate = 8;
+    public int NumberOfResponseSendingThreadsToCreate = 8;
+    public int NumberOfContextCleanupThreadsToCreate = 8;
 
     public final AutoConvert AutoConverter = new AutoConvert();
     // public freemarker.template.Configuration ViewEngine;
@@ -85,14 +96,6 @@ public abstract class HttpServer extends Thread {
     public void addRoute(Pattern regex, HttpResponder.Factory factory) {
         this.Routes.put(regex, factory);
     }
-
-//    public void addRoute(String path, Class<? extends HttpResponder> cls) throws Exception {
-//        this.addRoute(path, HttpResponder.createFactory(cls));
-//    }
-//
-//    public void addRoute(Pattern regex, Class<? extends HttpResponder> cls) throws Exception {
-//        this.Routes.put(regex, HttpResponder.createFactory(cls));
-//    }
 
     public Pattern buildRegexPattern(String path) throws Exception {
         String regexPattern;
@@ -146,7 +149,12 @@ public abstract class HttpServer extends Thread {
 //        ViewEngine.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
 //        ViewEngine.setLogTemplateExceptions(false);
 //    }
+
     public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
 
     public abstract void LogHandler(String message);
+
+    public HttpSession createSessionObject() {
+        return new HttpSession();
+    }
 }

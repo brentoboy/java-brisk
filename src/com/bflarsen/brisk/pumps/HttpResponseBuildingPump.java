@@ -17,7 +17,7 @@ public class HttpResponseBuildingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfResponseBuildingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
