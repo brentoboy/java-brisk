@@ -1,15 +1,11 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpCookie;
-import com.bflarsen.brisk.HttpResponse;
-import com.bflarsen.brisk.HttpServer;
+import com.bflarsen.brisk.*;
+import static com.bflarsen.util.Logger.*;
 
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 public class HttpResponseSendingPump implements Runnable {
 
@@ -87,14 +83,14 @@ public class HttpResponseSendingPump implements Runnable {
             response.sendBody(stream);
         }
         catch (Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
+            logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
         }
 
         try {
             stream.flush();
         }
         catch (Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
+            logEx(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
         }
 
         context.Stats.SendBodyEnded = System.nanoTime();
@@ -122,7 +118,7 @@ public class HttpResponseSendingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "building a response");
                 }
                 finally {
                     if (context != null) {

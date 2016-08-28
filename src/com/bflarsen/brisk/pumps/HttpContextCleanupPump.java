@@ -2,6 +2,7 @@ package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.HttpServer;
+import static com.bflarsen.util.Logger.*;
 
 public class HttpContextCleanupPump implements Runnable {
 
@@ -52,7 +53,7 @@ public class HttpContextCleanupPump implements Runnable {
 //                } catch (Exception ex) {}
 //            }
 //            else {
-//                context.Server.LogHandler("Socket already closed, no recycling");
+//                context.Server.logHandler("Socket already closed, no recycling");
 //            }
             try { context.Socket.close(); }
             catch (Exception ex) {}
@@ -63,23 +64,13 @@ public class HttpContextCleanupPump implements Runnable {
 
         // logging
         if (context.Request.Resource != null && !context.Request.Resource.isEmpty()) {
-            context.Server.LogHandler(
-                    context.Stats.totalMs + "ms"
-                    + "\t" + context.Request.Method
-                    + " " + context.Request.Protocol
-                    + " " + context.Request.Host
-                    + " " + context.Request.Resource
-            );
             if (context.Stats.totalMs > 5000000000L) { //5 seconds is long!
-                context.Server.LogHandler(
-                        "\t\tsuper long request/response cycle"
-                );
+                logWarning("Super long request/response cycle (" + context.Stats.totalMs + " ms)", "HttpContextCleanupPump", "cleanupContext", String.format("%d", context.Id));
             }
             if (context.Stats.SendBodyEnded == 0) {
-                context.Server.LogHandler(
-                        "\t\tNo SendBodyEnded, that's really bad"
-                );
+                logError("No SendBodyEnded", "HttpContextCleanupPump", "cleanupContext", String.format("%d", context.Id));
             }
+            context.Server.logRequestResponseCompleted(context);
         }
     }
 
@@ -104,7 +95,7 @@ public class HttpContextCleanupPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "building a response");
                 }
             }
         }
@@ -133,7 +124,7 @@ public class HttpContextCleanupPump implements Runnable {
                     ) {
                         context = parentPump.httpServerInstance.AllRequests.take();
                         if (context != nextContext) {
-                            parentPump.httpServerInstance.LogHandler("catchAll context != nextContext ... that's totally unexpected and means something is broken!");
+                            logError("catchAll context != nextContext ... that's totally unexpected and means something is broken!", this.getClass().getName(), "run()", "popping a new context from the queue");
                         }
                         nextContext = parentPump.httpServerInstance.AllRequests.peek();
                     }
@@ -144,11 +135,11 @@ public class HttpContextCleanupPump implements Runnable {
                     ) {
                         context = parentPump.httpServerInstance.AllRequests.take();
                         if (context != nextContext) {
-                            parentPump.httpServerInstance.LogHandler("catchAll context != nextContext ... that's totally unexpected and means something is broken!");
+                            logError("catchAll context != nextContext ... that's totally unexpected and means something is broken!", this.getClass().getName(), "run()", "popping a new context from the queue");
                         }
                         context.Stats.Expired = now;
                         parentPump.httpServerInstance.DoneSending.add(context);
-                        parentPump.httpServerInstance.LogHandler("Response expired before cleanup");
+                        logError("Response expired before cleanup", this.getClass().getName(), "run()", "");
                         nextContext = parentPump.httpServerInstance.AllRequests.peek();
                     }
                 }
@@ -156,7 +147,7 @@ public class HttpContextCleanupPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "building a response");
                 }
             }
         }

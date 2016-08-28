@@ -12,9 +12,11 @@ import java.util.regex.Pattern;
 
 import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
-import com.bflarsen.convert.AutoConvert;
+import com.bflarsen.util.AutoConvert;
+import static com.bflarsen.util.Logger.*;
 
-public abstract class HttpServer extends Thread {
+public class HttpServer extends Thread {
+    private final String CLASS_NAME = "HttpServer";
 
     public int Port = 80;
     public final Map<Pattern, HttpResponder.Factory> Routes = new LinkedHashMap<>();
@@ -51,11 +53,6 @@ public abstract class HttpServer extends Thread {
     public int NumberOfContextCleanupThreadsToCreate = 8;
 
     public final AutoConvert AutoConverter = new AutoConvert();
-    // public freemarker.template.Configuration ViewEngine;
-
-    public HttpServer() {
-        AutoConverter.ExceptionHandler = (ex) -> this.LogHandler(String.format("AutoConvert Error: %s", ex.getMessage()));
-    }
 
     @Override
     public void run() {
@@ -67,7 +64,7 @@ public abstract class HttpServer extends Thread {
         this.ContextCleanup.run();
 
         try (ServerSocket serverSocket = new ServerSocket(this.Port)) {
-            this.LogHandler("Listening on Port " + this.Port);
+            logInfo("Listening on Port " + this.Port, CLASS_NAME, "run()", "Initializing");
 
             while (!this.isClosing) {
                 try {
@@ -75,19 +72,19 @@ public abstract class HttpServer extends Thread {
                     this.IncomingRequests.add(socket);
                 }
                 catch (Exception ex) {
-                    this.ExceptionHandler(ex, this.getClass().getName(), "run", "Attempting to accept() on port " + this.Port);
+                    logEx(ex, CLASS_NAME, "run()", "Attempting to accept() on port " + this.Port);
                 }
             }
         }
         catch(IOException ex){
-            this.ExceptionHandler(ex, this.getClass().getName(), "run", "Attempting to listen() on port " + this.Port);
+            logEx(ex, CLASS_NAME, "run", "Attempting to listen() on port " + this.Port);
         }
 
-        this.LogHandler("No longer listening on Port " + this.Port);
+        logInfo("No longer listening on Port " + this.Port, CLASS_NAME, "run()", "Cleaning Up");
     }
 
     public void initiateShutdown() {
-        this.LogHandler("Initiating Http Server Shutdown");
+        logInfo("Initiating Shutdown Sequence", CLASS_NAME, "initiateShutdown()", "");
         this.isClosing = true;
     }
 
@@ -144,17 +141,22 @@ public abstract class HttpServer extends Thread {
         addRoute(pattern, StaticFileResponder.createFactory(Paths.get(baseDirectory)));
     }
 
-//    public void initViewEngine(Path templateFolder) throws Exception {
-//        ViewEngine = new Configuration(Configuration.VERSION_2_3_25);
-//        ViewEngine.setDirectoryForTemplateLoading(templateFolder.toFile());
-//        ViewEngine.setDefaultEncoding("UTF-8");
-//        ViewEngine.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
-//        ViewEngine.setLogTemplateExceptions(false);
-//    }
+    public String encodeJson(Object obj) throws Exception {
+        return "{\"error\":\"If you wish to send Json Encoded objects, you'll have to override HttpServer.encodeJson and use something like GSON to encode, I'd do that for you, but I don't want to introduce dependencies or force you to use an encoder you don't like. /r/n -- cheers\"}";
+    }
 
-    public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
-
-    public abstract void LogHandler(String message);
+    public void logRequestResponseCompleted(HttpContext context) {
+        logInfo(
+                context.Stats.totalMs + "ms"
+                + "\t" + context.Request.Method
+                + " " + context.Request.Protocol
+                + " " + context.Request.Host
+                + " " + context.Request.Resource
+                , "HttpServer"
+                , "logRequestResponseCompleted()"
+                , String.format("%d", context.Id)
+        );
+    }
 
     public HttpSession createSessionObject() {
         return new HttpSession();

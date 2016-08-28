@@ -3,15 +3,16 @@ package com.bflarsen.brisk.pumps;
 import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.HttpCookie;
 import com.bflarsen.brisk.HttpServer;
+import static com.bflarsen.util.Logger.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URLDecoder;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+
 
 public class HttpRequestParsingPump implements Runnable {
 
@@ -46,7 +47,7 @@ public class HttpRequestParsingPump implements Runnable {
         catch (IOException ex) {
             if (!ex.getMessage().equals("Connection reset")) {
                 // hmm
-                // parentPump.httpServerInstance.ExceptionHandler.handle(ex, this.getClass().getName(), "tryReadLine", "stream.readLine()");
+                // parentPump.httpServerInstance.exceptionHandler.handle(ex, this.getClass().getName(), "tryReadLine", "stream.readLine()");
             }
             return "";
         }
@@ -205,12 +206,12 @@ public class HttpRequestParsingPump implements Runnable {
                             context.Stats.RequestParserAborted = System.nanoTime();
                             context = null;
                             socket.close();
-                            parentPump.httpServerInstance.LogHandler("Empty request, discarded");
+                            logTrace("Empty request, discarded", "HttpRequestParsingPump", "run()", "");
                         }
 //                        catch (takingTooLong ex) {
 //                            parentPump.httpServerInstance.IncomingRequests.put(socket);
 //                            context = null;
-//                            parentPump.httpServerInstance.LogHandler("initial socket read was taking too long, we recycled it");
+//                            parentPump.httpServerInstance.logHandler("initial socket read was taking too long, we recycled it");
 //                        }
                     }
                 }
@@ -218,7 +219,7 @@ public class HttpRequestParsingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "parsing a request");
+                    logEx(ex, this.getClass().getName(), "run()", "parsing a request");
                 }
                 finally {
                     if (context != null) {

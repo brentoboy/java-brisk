@@ -1,11 +1,7 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpResponder;
-import com.bflarsen.brisk.HttpResponse;
-import com.bflarsen.brisk.mocks.HttpServerMock;
-import com.bflarsen.brisk.responders.BaseResponder;
-import com.bflarsen.brisk.responders.DefaultError404Responder;
+import com.bflarsen.brisk.*;
+import com.bflarsen.brisk.responders.*;
 import org.junit.After;
 import org.junit.Before;
 
@@ -23,12 +19,12 @@ public class HttpRequestRoutingPumpTest extends junit.framework.TestCase {
         }
     }
 
-    HttpServerMock Server;
+    HttpServer Server;
     HttpContext Context;
 
     @Before
     public void setUp() {
-        Server = new HttpServerMock();
+        Server = new HttpServer();
         try {
             Server.addRoute("/", IndexResponder::new);
             Server.addRoute("/test.html", TestResponder::new);

@@ -1,4 +1,4 @@
-package com.bflarsen.brisk.responses;
+package com.bflarsen.brisk.examples;
 
 //import java.io.Writer;
 //

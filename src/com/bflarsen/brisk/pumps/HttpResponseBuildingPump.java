@@ -1,10 +1,8 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpResponder;
-import com.bflarsen.brisk.HttpServer;
-import com.bflarsen.brisk.responders.DefaultError404Responder;
-import com.bflarsen.brisk.responders.DefaultError500Responder;
+import com.bflarsen.brisk.*;
+import com.bflarsen.brisk.responders.*;
+import static com.bflarsen.util.Logger.*;
 
 
 public class HttpResponseBuildingPump implements Runnable {
@@ -40,7 +38,7 @@ public class HttpResponseBuildingPump implements Runnable {
             context.Response = context.Responder.respond(context);
         }
         catch(Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.Responder.getClass().getSimpleName());
+            logEx(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.Responder.getClass().getSimpleName());
             context.ResponderException = ex;
             HttpResponder responder = context.Server.Error500ResponderFactory.create();
             if (responder == null) {
@@ -50,14 +48,14 @@ public class HttpResponseBuildingPump implements Runnable {
                 context.Response = responder.respond(context);
             }
             catch (Exception ex2) {
-                context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an exception response of type " + context.Responder.getClass().getSimpleName());
+                logEx(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an exception response of type " + context.Responder.getClass().getSimpleName());
                 responder = new DefaultError500Responder();
                 try {
                     context.Response = responder.respond(context);
                 }
                 catch (Exception ex3) {
                     // yeah, ... about that.   I've got no more ideas
-                    context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build the default exception response.");
+                    logEx(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build the default exception response.");
                 }
             }
         }
@@ -84,7 +82,7 @@ public class HttpResponseBuildingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "building a response");
                 }
                 finally {
                     if (context != null) {

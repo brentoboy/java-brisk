@@ -1,9 +1,8 @@
 package com.bflarsen.brisk.responders;
 
 import com.bflarsen.brisk.*;
-import com.bflarsen.brisk.responses.BaseResponse;
-import com.bflarsen.brisk.responses.FileResponse;
-import com.bflarsen.brisk.responses.PlainTextResponse;
+import com.bflarsen.brisk.responses.*;
+import static com.bflarsen.util.Logger.*;
 
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
@@ -19,14 +18,11 @@ public class StaticFileResponder implements HttpResponder {
         this.BasePath = baseDirectory;
     }
 
-    public static HttpResponder.Factory createFactory(Path path) throws Exception {
+    public static Factory createFactory(Path path) throws Exception {
         if (!Files.isDirectory(path))
             throw new Exception("'" + path.toString() + "' is not a directory.");
-
-        final Path baseFolder = path;
-
-        // TODO: you could have one instance handle all of these, and not create a new object instance every time.
-        return () -> new StaticFileResponder(baseFolder);
+        final StaticFileResponder responder = new StaticFileResponder(path);
+        return () -> responder;  // the static file responder is stateless enough that a single instance can handle many responses
     }
 
     @Override
@@ -53,7 +49,7 @@ public class StaticFileResponder implements HttpResponder {
                 modifiedSince = modifiedSinceDateFormatter.parse(ifModifiedSince).getTime() + 1000;
             }
             catch (Exception ex) {
-                context.Server.ExceptionHandler(ex, "StaticFileResponder", "respond", "parsing ModifiedSince header");
+                logEx(ex, "StaticFileResponder", "respond", "parsing ModifiedSince header");
             }
         }
         if (file.whenModified <= modifiedSince) {
@@ -62,7 +58,7 @@ public class StaticFileResponder implements HttpResponder {
             return response;
         }
 
-        // context.Server.LogHandler(String.format("File '%s' has been modified (%d <= %d)", path, modifiedSince, file.whenModified));
+        // context.Server.logHandler(String.format("File '%s' has been modified (%d <= %d)", path, modifiedSince, file.whenModified));
 
         // respond with a normal file response
         return new FileResponse(file.absolutePath, context.Server.FileCache);

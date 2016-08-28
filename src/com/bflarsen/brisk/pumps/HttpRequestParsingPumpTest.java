@@ -1,20 +1,21 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.mocks.HttpServerMock;
+import com.bflarsen.brisk.*;
 import org.junit.After;
 import org.junit.Before;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
 
+import static com.bflarsen.util.Logger.*;
+
 public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
 
-    HttpServerMock Server;
+    HttpServer Server;
 
     @Before
     public void setUp() {
-        Server = new HttpServerMock();
+        Server = new HttpServer();
     }
 
     @After
@@ -34,7 +35,7 @@ public class HttpRequestParsingPumpTest extends junit.framework.TestCase {
                     context.RequestStream.close();
                 }
                 catch (Exception ex) {
-                    context.Server.ExceptionHandler(ex, "", "", "closing request stream");
+                    logEx(ex, "HttpRequestParsingPump", "parseHttpRequest", "closing request stream");
                 }
             }
         }
