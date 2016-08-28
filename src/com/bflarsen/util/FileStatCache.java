@@ -1,4 +1,4 @@
-package com.bflarsen.brisk;
+package com.bflarsen.util;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -15,7 +15,7 @@ public class FileStatCache {
     public static final int KB = 1024;
     public static final int MB = KB*KB;
     public static final long GB = KB*KB*KB;
-    public static final long TB = KB*KB*KB*KB;
+    public static final long TB = (long)KB*KB*KB*KB;
 
     public static String formatFileSize(Long size) {
         if (size == null)
@@ -147,7 +147,6 @@ public class FileStatCache {
         byte[] content = contentCache.get(stat.absolutePath);
         if (content == null) {
             try {
-//                System.out.println("Had to load content");
                 content = Files.readAllBytes(Paths.get(stat.absolutePath));
             }
             catch (Exception ex) {
@@ -171,9 +170,6 @@ public class FileStatCache {
                 contentCache.put(stat.absolutePath, content);
             }
         }
-//        else {
-//            System.out.println("Content was cached!! - yeah");
-//        }
         outputStream.write(content);
     }
 }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Brisk" basedir=".">
+
+  <property name="src.dir" value="src" />
+  <property name="lib.dir" value="lib" />
+  <property name="build.dir" value="build" />
+  <property name="classes.dir" value="${build.dir}/classes" />
+  <property name="jar.dir" value="${build.dir}/jar" />
+  <property name="test.results.dir" value="test-results" />
+
+  <path id="classpath">
+    <fileset dir="${lib.dir}" includes="**/*.jar" />
+  </path>
+
+  <path id="application" location="${jar.dir}/${ant.project.name}.jar" />
+
+  <target name="clean">
+    <delete dir="${build.dir}" />
+    <delete dir="${test.results.dir}" />
+  </target>
+
+  <target name="compile">
+    <mkdir dir="${classes.dir}" />
+    <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" includeantruntime="false" />
+  </target>
+
+  <target name="jar">
+    <mkdir dir="${jar.dir}" />
+    <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}" />
+  </target>
+
+  <target name="test">
+    <mkdir dir="${test.results.dir}" />
+    <junit printsummary="yes">
+      <classpath>
+        <path refid="classpath" />
+        <path refid="application" />
+      </classpath>
+      <formatter type="xml" />
+      <batchtest fork="yes" todir="${test.results.dir}">
+        <fileset dir="${src.dir}" includes="**/*Test.java" />
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="make-html">
+    <junitreport todir="${test.results.dir}">
+      <fileset dir="${test.results.dir}" includes="TEST-*.xml" />
+      <report todir="${test.results.dir}" />
+    </junitreport>
+  </target>
+
+</project>

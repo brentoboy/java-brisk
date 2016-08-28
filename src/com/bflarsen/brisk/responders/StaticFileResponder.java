@@ -2,6 +2,8 @@ package com.bflarsen.brisk.responders;
 
 import com.bflarsen.brisk.*;
 import com.bflarsen.brisk.responses.*;
+import com.bflarsen.util.FileStatCache;
+
 import static com.bflarsen.util.Logger.*;
 
 import java.nio.file.*;
