@@ -1,13 +1,13 @@
 package com.bflarsen.brisk.responses;
 
-public class RedirectResponse extends BaseResponse {
+public class RedirectResponse extends BaseBufferedResponse {
 
     public RedirectResponse() {
-        super(301);
+        super(301, "Redirected");
     }
 
     @Override
     public byte[] getBodyBytes() throws Exception {
-        return "Redirected".getBytes("UTF-8");
+        throw new Exception("This shouldn't be called, because I supplied content to the constructor.");
     }
 }

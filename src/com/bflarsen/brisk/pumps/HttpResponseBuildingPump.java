@@ -1,10 +1,8 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpResponder;
-import com.bflarsen.brisk.HttpServer;
-import com.bflarsen.brisk.responders.DefaultError404Responder;
-import com.bflarsen.brisk.responders.DefaultError500Responder;
+import com.bflarsen.brisk.*;
+import com.bflarsen.brisk.responders.*;
+import static com.bflarsen.util.Logger.*;
 
 import java.util.Map;
 
@@ -19,7 +17,7 @@ public class HttpResponseBuildingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfResponseBuildingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
@@ -42,7 +40,7 @@ public class HttpResponseBuildingPump implements Runnable {
             context.Response = context.Responder.respond(context);
         }
         catch(Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.Responder.getClass().getSimpleName());
+            logEx(ex, "HttpResponseBuildingPump", "buildResponse", "attempting to build response of type " + context.Responder.getClass().getSimpleName());
             context.ResponderException = ex;
             HttpResponder responder = context.Server.Error500ResponderFactory.create();
             if (responder == null) {
@@ -52,14 +50,14 @@ public class HttpResponseBuildingPump implements Runnable {
                 context.Response = responder.respond(context);
             }
             catch (Exception ex2) {
-                context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an exception response of type " + context.Responder.getClass().getSimpleName());
+                logEx(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build an exception response of type " + context.Responder.getClass().getSimpleName());
                 responder = new DefaultError500Responder();
                 try {
                     context.Response = responder.respond(context);
                 }
                 catch (Exception ex3) {
                     // yeah, ... about that.   I've got no more ideas
-                    context.Server.ExceptionHandler(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build the default exception response.");
+                    logEx(ex2, "HttpResponseBuildingPump", "buildResponse", "attempting to build the default exception response.");
                 }
             }
         }
@@ -94,7 +92,7 @@ public class HttpResponseBuildingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "building a response");
                 }
                 finally {
                     if (context != null) {
@@ -144,7 +142,7 @@ function buildResponse(context) {
 			response.headers["Last-Modified"] = cachedVersion.lastModified;
 			response.headers["Expires"] =  in24Hours.toUTCString();
 			response.bodyBytes = cachedVersion.buffer;
-			//console.log("Using cache: " + context.request.resource);
+			//console.log("Using statCache: " + context.request.resource);
 		}
 		else
 		{
@@ -162,7 +160,7 @@ function buildResponse(context) {
 				response.headers["Expires"] =  in24Hours.toUTCString();
 
 				if (response.file.length() < 8196) {
-					//console.log("Adding to cache: " + context.request.resource);
+					//console.log("Adding to statCache: " + context.request.resource);
 					var buffer = JavaFiles.readAllBytes(file.toPath());
 					fileCache[context.request.resource] = {
 						contentType: response.headers["Content-Type"],

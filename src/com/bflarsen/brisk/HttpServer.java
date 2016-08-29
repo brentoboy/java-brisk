@@ -1,21 +1,24 @@
 package com.bflarsen.brisk;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
 import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
-import com.bflarsen.convert.AutoConvert;
+import com.bflarsen.util.AutoConvert;
+import com.bflarsen.util.FileStatCache;
 
-public abstract class HttpServer extends Thread {
+import static com.bflarsen.util.Logger.*;
+
+public class HttpServer extends Thread {
+    private final String CLASS_NAME = "HttpServer";
 
     public int Port = 80;
     public final Map<Pattern, HttpResponder.Factory> Routes = new LinkedHashMap<>();
@@ -37,12 +40,21 @@ public abstract class HttpServer extends Thread {
     private final HttpResponseSendingPump ResponseSender = new HttpResponseSendingPump(this);
     private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
 
-    public final AutoConvert AutoConverter = new AutoConvert();
-    // public freemarker.template.Configuration ViewEngine;
+    public boolean CreateSessions = false;
+    public long SessionExpiresAfterMillis = 2 * 60 * 60 * 1000L; // 2 hours
+    public final Map<String, HttpSession> Sessions = new ConcurrentHashMap<>();
+    public String SessionDomain;
+    public String SessionCookieName = "SessionID";
 
-    public HttpServer() {
-        AutoConverter.ExceptionHandler = (ex) -> this.LogHandler(String.format("AutoConvert Error: %s", ex.getMessage()));
-    }
+    public final FileStatCache FileCache = new FileStatCache();
+
+    public int NumberOfRequestParsingThreadsToCreate = 8;
+    public int NumberOfRequestRoutingThreadsToCreate = 8;
+    public int NumberOfResponseBuildingThreadsToCreate = 8;
+    public int NumberOfResponseSendingThreadsToCreate = 8;
+    public int NumberOfContextCleanupThreadsToCreate = 8;
+
+    public final AutoConvert AutoConverter = new AutoConvert();
 
     @Override
     public void run() {
@@ -54,7 +66,7 @@ public abstract class HttpServer extends Thread {
         this.ContextCleanup.run();
 
         try (ServerSocket serverSocket = new ServerSocket(this.Port)) {
-            this.LogHandler("Listening on Port " + this.Port);
+            logInfo("Listening on Port " + this.Port, CLASS_NAME, "run()", "Initializing");
 
             while (!this.isClosing) {
                 try {
@@ -62,19 +74,19 @@ public abstract class HttpServer extends Thread {
                     this.IncomingRequests.add(socket);
                 }
                 catch (Exception ex) {
-                    this.ExceptionHandler(ex, this.getClass().getName(), "run", "Attempting to accept() on port " + this.Port);
+                    logEx(ex, CLASS_NAME, "run()", "Attempting to accept() on port " + this.Port);
                 }
             }
         }
         catch(IOException ex){
-            this.ExceptionHandler(ex, this.getClass().getName(), "run", "Attempting to listen() on port " + this.Port);
+            logEx(ex, CLASS_NAME, "run", "Attempting to listen() on port " + this.Port);
         }
 
-        this.LogHandler("No longer listening on Port " + this.Port);
+        logInfo("No longer listening on Port " + this.Port, CLASS_NAME, "run()", "Cleaning Up");
     }
 
     public void initiateShutdown() {
-        this.LogHandler("Initiating Http Server Shutdown");
+        logInfo("Initiating Shutdown Sequence", CLASS_NAME, "initiateShutdown()", "");
         this.isClosing = true;
     }
 
@@ -85,14 +97,6 @@ public abstract class HttpServer extends Thread {
     public void addRoute(Pattern regex, HttpResponder.Factory factory) {
         this.Routes.put(regex, factory);
     }
-
-//    public void addRoute(String path, Class<? extends HttpResponder> cls) throws Exception {
-//        this.addRoute(path, HttpResponder.createFactory(cls));
-//    }
-//
-//    public void addRoute(Pattern regex, Class<? extends HttpResponder> cls) throws Exception {
-//        this.Routes.put(regex, HttpResponder.createFactory(cls));
-//    }
 
     public Pattern buildRegexPattern(String path) throws Exception {
         String regexPattern;
@@ -139,20 +143,14 @@ public abstract class HttpServer extends Thread {
         addRoute(pattern, StaticFileResponder.createFactory(Paths.get(baseDirectory)));
     }
 
-//    public void initViewEngine(Path templateFolder) throws Exception {
-//        ViewEngine = new Configuration(Configuration.VERSION_2_3_25);
-//        ViewEngine.setDirectoryForTemplateLoading(templateFolder.toFile());
-//        ViewEngine.setDefaultEncoding("UTF-8");
-//        ViewEngine.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
-//        ViewEngine.setLogTemplateExceptions(false);
-//    }
-    public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
-
-    public abstract void LogHandler(String message);
+    public String encodeJson(Object obj) throws Exception {
+        return "{\"error\":\"If you wish to send Json Encoded objects, you'll have to override HttpServer.encodeJson and use something like GSON to encode, I'd do that for you, but I don't want to introduce dependencies or force you to use an encoder you don't like. /r/n -- cheers\"}";
+    }
 
     public Map<String, Object> createWorkerThreadResources() throws Exception {
         return new LinkedHashMap<>();
     }
+
     public void freeWorkerThreadResources(Map<String, Object> resources) throws Exception {
         for (Map.Entry<String, Object> entry : resources.entrySet()) {
             String key = entry.getKey();
@@ -167,6 +165,23 @@ public abstract class HttpServer extends Thread {
             }
         }
     }
+
     public void resetWorkerThreadResources(Map<String, Object> resources) throws Exception {}
 
+    public void logRequestResponseCompleted(HttpContext context) {
+        logInfo(
+                context.Stats.totalMs + "ms"
+                + "\t" + context.Request.Method
+                + " " + context.Request.Protocol
+                + " " + context.Request.Host
+                + " " + context.Request.Resource
+                , "HttpServer"
+                , "logRequestResponseCompleted()"
+                , String.format("%d", context.Id)
+        );
+    }
+
+    public HttpSession createSessionObject() {
+        return new HttpSession();
+    }
 }

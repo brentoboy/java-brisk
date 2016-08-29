@@ -2,10 +2,11 @@ package com.bflarsen.brisk.responses;
 
 import java.nio.charset.Charset;
 
-public abstract class HtmlResponse extends BaseResponse {
+public abstract class HtmlResponse extends BaseBufferedResponse {
 
     protected HtmlResponse(int statusCode) {
         super(statusCode);
+        this.setHeader("Content-Type", "text/html");
     }
 
     public abstract String generateHtml() throws Exception;

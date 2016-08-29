@@ -1,11 +1,11 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpResponder;
-import com.bflarsen.brisk.HttpServer;
+import com.bflarsen.brisk.*;
+import static com.bflarsen.util.Logger.*;
 
 import java.util.Map;
 import java.util.regex.Pattern;
+
 
 public class HttpRequestRoutingPump implements Runnable {
 
@@ -17,7 +17,7 @@ public class HttpRequestRoutingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfRequestRoutingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
@@ -44,7 +44,7 @@ public class HttpRequestRoutingPump implements Runnable {
                 }
             }
         }
-        context.Server.LogHandler("No route found to match: " + url);
+        logInfo("No route found to match: " + url, "HttpRequestRoutingPump", "chooseRoute", "");
         context.Responder = context.Server.Error404ResponderFactory.create();
     }
 
@@ -69,7 +69,7 @@ public class HttpRequestRoutingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "choosing a route");
+                    logEx(ex, this.getClass().getName(), "run()", "choosing a route");
                 }
                 finally {
                     if (context != null) {

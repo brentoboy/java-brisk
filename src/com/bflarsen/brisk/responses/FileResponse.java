@@ -1,32 +1,33 @@
 package com.bflarsen.brisk.responses;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.bflarsen.util.FileStatCache;
+
+import java.io.OutputStream;
+import java.nio.file.Paths;
 import java.util.Date;
 
 public class FileResponse extends BaseResponse {
 
-    Path path;
-    byte[] buffer;
-    Date lastModified;
+    FileStatCache cache;
+    FileStatCache.FileStat fileInfo;
 
-    public FileResponse(Path filePath) {
+    public FileResponse(String filePath, FileStatCache cache) {
         super(200);
-        this.path = filePath;
-        try {
-            this.lastModified = new Date(Files.getLastModifiedTime(this.path).toMillis());
-        } catch (Exception ex) {}
-        try {
-            this.buffer = Files.readAllBytes(this.path);
-        } catch (Exception ex) {}
+        this.cache = cache;
+        this.fileInfo = cache.get(filePath.toString());
 
-        this.setHeader("Content-Type", lookupMimeType(this.path.getFileName().toString()));
-        this.setHeader("Last-Modified", UtcFormatter.format(this.lastModified));
-        // response.headers["Expires"] =  in24Hours.toUTCString();
+        this.setHeader("Content-Type", lookupMimeType(Paths.get(filePath).getFileName().toString()));
+        this.setHeader("Last-Modified", UtcFormatter.format(new Date(this.fileInfo.whenModified)));
+        this.setHeader("Expires", UtcFormatter.format(new Date(System.currentTimeMillis() + 24*60*60*1000L))); // 24 hours
     }
 
     @Override
-    public byte[] getBodyBytes() throws Exception {
-        return this.buffer;
+    public void sendBody(OutputStream os) throws Exception {
+        this.cache.streamTo(this.fileInfo.path, os);
+    }
+
+    @Override
+    public Long getContentLength() {
+        return this.fileInfo.size;
     }
 }

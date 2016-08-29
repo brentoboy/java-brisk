@@ -1,14 +1,11 @@
 package com.bflarsen.brisk.pumps;
 
-import com.bflarsen.brisk.HttpContext;
-import com.bflarsen.brisk.HttpResponse;
-import com.bflarsen.brisk.HttpServer;
+import com.bflarsen.brisk.*;
+import static com.bflarsen.util.Logger.*;
 
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 public class HttpResponseSendingPump implements Runnable {
 
@@ -20,7 +17,7 @@ public class HttpResponseSendingPump implements Runnable {
 
     @Override
     public void run() {
-        Worker[] workers = new Worker[8];
+        Worker[] workers = new Worker[httpServerInstance.NumberOfResponseSendingThreadsToCreate];
         // spawn a bunch of workers
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(this);
@@ -47,21 +44,9 @@ public class HttpResponseSendingPump implements Runnable {
         OutputStream stream = context.ResponseStream;
         PrintWriter streamWriter = new java.io.PrintWriter(stream, true);
 
-        byte[] bodyBytes = null;
-        try {
-            bodyBytes = response.getBodyBytes();
-        }
-        catch (Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "getBodyBytes");
-        }
-        if (bodyBytes != null) {
-            response.setHeader("Content-Length", ((Integer)bodyBytes.length).toString());
-        }
-        else {
-            Long length = response.getContentLength();
-            if (length != null) {
-                response.setHeader("Content-Length", length.toString());
-            }
+        Long length = response.getContentLength();
+        if (length != null) {
+            response.setHeader("Content-Length", length.toString());
         }
 
         // send the first line ... something like this :  "HTTP/1.1 200 OK"
@@ -81,6 +66,11 @@ public class HttpResponseSendingPump implements Runnable {
             ));
         }
 
+        // send the cookies
+        for (HttpCookie cookie : context.SendCookies) {
+            streamWriter.println(cookie.getResponseLine());
+        }
+
         // send a blank line signifying "</end headers>"
         streamWriter.println("");
         streamWriter.flush();
@@ -89,26 +79,18 @@ public class HttpResponseSendingPump implements Runnable {
         context.Stats.SendBodyStarted = System.nanoTime();
 
         // send body
-        if (bodyBytes != null) {
-            try {
-                stream.write(bodyBytes);
-            }
-            catch (Exception ex) {
-                context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "writing bodyBytes");
-            }
-        } else {
-            try {
-                response.sendBody(stream);
-            }
-            catch (Exception ex) {
-                context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
-            }
+        try {
+            response.sendBody(stream);
         }
+        catch (Exception ex) {
+            logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
+        }
+
         try {
             stream.flush();
         }
         catch (Exception ex) {
-            context.Server.ExceptionHandler(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
+            logEx(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
         }
 
         context.Stats.SendBodyEnded = System.nanoTime();
@@ -136,7 +118,7 @@ public class HttpResponseSendingPump implements Runnable {
                     return;
                 }
                 catch (Exception ex) {
-                    parentPump.httpServerInstance.ExceptionHandler(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "building a response");
                 }
                 finally {
                     if (context != null) {
