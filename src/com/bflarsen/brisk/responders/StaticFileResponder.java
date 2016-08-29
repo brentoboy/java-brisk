@@ -15,7 +15,7 @@ public class StaticFileResponder implements HttpResponder {
 
     public static HttpResponder.Factory createFactory(Path path) throws Exception {
         if (!Files.isDirectory(path))
-            throw new Exception("'" + path.toString() + "' is not a directory.");
+            throw new Exception("'" + path.toString() + "' is not a directory. CWD:" + Paths.get(".").toAbsolutePath().normalize().toString());
 
         final Path baseFolder = path;
 

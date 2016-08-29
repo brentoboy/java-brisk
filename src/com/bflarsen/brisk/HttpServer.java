@@ -149,4 +149,24 @@ public abstract class HttpServer extends Thread {
     public abstract void ExceptionHandler(Exception ex, String className, String functionName, String whileDoing);
 
     public abstract void LogHandler(String message);
+
+    public Map<String, Object> createWorkerThreadResources() throws Exception {
+        return new LinkedHashMap<>();
+    }
+    public void freeWorkerThreadResources(Map<String, Object> resources) throws Exception {
+        for (Map.Entry<String, Object> entry : resources.entrySet()) {
+            String key = entry.getKey();
+            Object resource = entry.getValue();
+            if (resource instanceof AutoCloseable) {
+                AutoCloseable closeable = (AutoCloseable) resource;
+                try {
+                    closeable.close();
+                } catch (Exception ex) {
+                    ExceptionHandler(ex, "HttpServer", "freeWorkerThreadResources", "closing '" + key + "'");
+                }
+            }
+        }
+    }
+    public void resetWorkerThreadResources(Map<String, Object> resources) throws Exception {}
+
 }

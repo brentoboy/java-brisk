@@ -3,6 +3,7 @@ package com.bflarsen.brisk;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
 import java.net.Socket;
+import java.util.Map;
 
 public class HttpContext {
 
@@ -16,6 +17,7 @@ public class HttpContext {
     public HttpResponder Responder;
     public HttpResponse Response;
     public Exception ResponderException;
+    public Map<String, Object> WorkerThreadResources;
 
     public static class Statistics {
         public long RequestParserStarted;

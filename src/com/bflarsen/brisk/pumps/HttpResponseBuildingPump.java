@@ -6,6 +6,8 @@ import com.bflarsen.brisk.HttpServer;
 import com.bflarsen.brisk.responders.DefaultError404Responder;
 import com.bflarsen.brisk.responders.DefaultError500Responder;
 
+import java.util.Map;
+
 
 public class HttpResponseBuildingPump implements Runnable {
 
@@ -65,9 +67,16 @@ public class HttpResponseBuildingPump implements Runnable {
 
     private static class Worker extends Thread {
         HttpResponseBuildingPump parentPump;
+        Map<String, Object> myResources;
 
         Worker(HttpResponseBuildingPump parent) {
-            this.parentPump = parent;
+            parentPump = parent;
+            try {
+                myResources = parentPump.httpServerInstance.createWorkerThreadResources();
+            }
+            catch (Exception ex) {
+                parentPump.httpServerInstance.ExceptionHandler(ex, "HttpResponseBuildingPump.Worker", "Constructor", "createWorkerThreadResources");
+            }
         }
 
         @Override
@@ -78,6 +87,7 @@ public class HttpResponseBuildingPump implements Runnable {
                     Thread.yield();
                     context = parentPump.httpServerInstance.RoutedRequests.take();
                     context.Stats.ResponseBuilderStarted = System.nanoTime();
+                    context.WorkerThreadResources = myResources;
                     buildResponse(context);
                 }
                 catch (InterruptedException ex) {
@@ -88,10 +98,23 @@ public class HttpResponseBuildingPump implements Runnable {
                 }
                 finally {
                     if (context != null) {
+                        context.WorkerThreadResources = null;
                         context.Stats.ResponseBuilderEnded = System.nanoTime();
                         parentPump.httpServerInstance.ResponseReady.add(context);
+                        try {
+                            parentPump.httpServerInstance.resetWorkerThreadResources(myResources);
+                        }
+                        catch(Exception ex) {
+                            parentPump.httpServerInstance.ExceptionHandler(ex, "HttpResponseBuildingPump", "run()", "resetting WorkerThreadResources");
+                        }
                     }
                 }
+            }
+            try {
+                parentPump.httpServerInstance.freeWorkerThreadResources(myResources);
+            }
+            catch (Exception ex) {
+                parentPump.httpServerInstance.ExceptionHandler(ex, "HttpResponseBuildingPump.Worker", "run", "freeWorkerThreadResources");
             }
         }
     }

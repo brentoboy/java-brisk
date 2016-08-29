@@ -9,7 +9,7 @@ public class ExampleServer extends HttpServer{
     public static void main(String[] args) throws Exception {
         ExampleServer server = new ExampleServer();
         server.Port = 8080;
-        server.addRouteToFiles(Pattern.compile("^.*\\.(ico|txt|css|jpg|gif|jpeg)$"), "C:/code/java-brisk/static");
+        server.addRouteToFiles(Pattern.compile("^.*\\.(ico|txt|css|jpg|gif|jpeg)$"), "static");
         server.addRoute("/special.html", SpecialPageResponder::new);
         server.addRoute("/", IndexPageResponder::new);
         server.addRoute("/some.json", SomeJsonResponder::new);
