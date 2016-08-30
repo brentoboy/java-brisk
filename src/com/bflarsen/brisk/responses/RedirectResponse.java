@@ -1,13 +1,12 @@
 package com.bflarsen.brisk.responses;
 
-public class RedirectResponse extends BaseBufferedResponse {
+import com.bflarsen.brisk.HttpStatusCode;
 
-    public RedirectResponse() {
-        super(301, "Redirected");
+public class RedirectResponse extends SimpleStatusResponse {
+
+    public RedirectResponse(String location) {
+        super(HttpStatusCode.MOVED_PERMANENTLY, "<a href='"+location+"'>"+location+"</a>");
+        setHeader("Location", location);
     }
 
-    @Override
-    public byte[] getBodyBytes() throws Exception {
-        throw new Exception("This shouldn't be called, because I supplied content to the constructor.");
-    }
 }

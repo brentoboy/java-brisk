@@ -6,18 +6,17 @@ public abstract class BaseBufferedResponse extends BaseResponse {
 
     byte[] buffer;
 
-    public BaseBufferedResponse(int statusCode) {
-        super(statusCode);
-    }
-
-    public BaseBufferedResponse(int statusCode, String text) {
-        this(statusCode);
-        if (text != null) {
-            buffer = text.getBytes(UTF8);
+    public BaseBufferedResponse(int statusCode, String contentType, String textContent) {
+        super(statusCode, contentType);
+        if (textContent != null) {
+            buffer = textContent.getBytes(UTF8);
         }
     }
 
-    public abstract byte[] getBodyBytes() throws Exception;
+    public byte[] getBodyBytes() throws Exception {
+        // todo: log, complain, do something ...  you if you dont pass in text, you've got to override getBodyBytes!
+        return null;
+    }
 
     @Override
     public Long getContentLength() throws Exception {

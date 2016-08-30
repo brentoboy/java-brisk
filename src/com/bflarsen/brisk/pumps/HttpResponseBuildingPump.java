@@ -73,7 +73,7 @@ public class HttpResponseBuildingPump implements Runnable {
                 myResources = parentPump.httpServerInstance.createWorkerThreadResources();
             }
             catch (Exception ex) {
-                parentPump.httpServerInstance.ExceptionHandler(ex, "HttpResponseBuildingPump.Worker", "Constructor", "createWorkerThreadResources");
+                logEx(ex, "HttpResponseBuildingPump.Worker", "Constructor", "createWorkerThreadResources");
             }
         }
 
@@ -103,7 +103,7 @@ public class HttpResponseBuildingPump implements Runnable {
                             parentPump.httpServerInstance.resetWorkerThreadResources(myResources);
                         }
                         catch(Exception ex) {
-                            parentPump.httpServerInstance.ExceptionHandler(ex, "HttpResponseBuildingPump", "run()", "resetting WorkerThreadResources");
+                            logEx(ex, "HttpResponseBuildingPump", "run()", "resetting WorkerThreadResources");
                         }
                     }
                 }
@@ -112,7 +112,7 @@ public class HttpResponseBuildingPump implements Runnable {
                 parentPump.httpServerInstance.freeWorkerThreadResources(myResources);
             }
             catch (Exception ex) {
-                parentPump.httpServerInstance.ExceptionHandler(ex, "HttpResponseBuildingPump.Worker", "run", "freeWorkerThreadResources");
+                logEx(ex, "HttpResponseBuildingPump.Worker", "run", "freeWorkerThreadResources");
             }
         }
     }

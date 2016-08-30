@@ -55,7 +55,7 @@ public class StaticFileResponder implements HttpResponder {
             }
         }
         if (file.whenModified <= modifiedSince) {
-            BaseResponse response = new PlainTextResponse("Not Modified");
+            BaseResponse response = new SimpleStatusResponse(HttpStatusCode.NOT_MODIFIED);
             response.StatusCode = 304;
             return response;
         }

@@ -40,6 +40,8 @@ public class HttpServer extends Thread {
     private final HttpResponseSendingPump ResponseSender = new HttpResponseSendingPump(this);
     private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
 
+    public boolean DisplayErrorDetails = false;
+
     public boolean CreateSessions = false;
     public long SessionExpiresAfterMillis = 2 * 60 * 60 * 1000L; // 2 hours
     public final Map<String, HttpSession> Sessions = new ConcurrentHashMap<>();
@@ -160,7 +162,7 @@ public class HttpServer extends Thread {
                 try {
                     closeable.close();
                 } catch (Exception ex) {
-                    ExceptionHandler(ex, "HttpServer", "freeWorkerThreadResources", "closing '" + key + "'");
+                    logEx(ex, "HttpServer", "freeWorkerThreadResources", "closing '" + key + "'");
                 }
             }
         }

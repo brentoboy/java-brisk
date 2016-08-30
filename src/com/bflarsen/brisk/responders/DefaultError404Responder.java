@@ -1,8 +1,7 @@
 package com.bflarsen.brisk.responders;
 
 import com.bflarsen.brisk.*;
-import com.bflarsen.brisk.responses.BaseResponse;
-import com.bflarsen.brisk.responses.PlainTextResponse;
+import com.bflarsen.brisk.responses.*;
 
 public class DefaultError404Responder implements HttpResponder {
     @Override
@@ -17,12 +16,11 @@ public class DefaultError404Responder implements HttpResponder {
                 || context.Request == null
                 || context.Request.Path == null
         ) {
-            response = new PlainTextResponse("Not Found");
+            response = new SimpleStatusResponse(HttpStatusCode.NOT_FOUND);
         }
         else {
-            response = new PlainTextResponse(String.format("Not Found: %s", context.Request.Path));
+            response = new SimpleStatusResponse(HttpStatusCode.NOT_FOUND, context.Request.Path);
         }
-        response.StatusCode = 404;
         return response;
     }
 }
