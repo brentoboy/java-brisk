@@ -14,6 +14,8 @@ public abstract class BaseResponder implements HttpResponder {
     @Override
     public HttpResponse respond(HttpContext context) throws Exception {
         context.Server.AutoConverter.fill(this, context.Request.Params);
+        context.Server.AutoConverter.fill(this, context.Session.Params);
+        context.Server.AutoConverter.fill(this, context.WorkerThreadResources);
         return this.buildResponse();
     }
 }

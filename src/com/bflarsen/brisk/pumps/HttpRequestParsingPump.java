@@ -162,8 +162,7 @@ public class HttpRequestParsingPump implements Runnable {
                 sessionID = java.util.UUID.randomUUID().toString().replace("-", "");
             }
             if (context.Session == null || context.Session.Expires < System.currentTimeMillis()) {
-                context.Session = context.Server.createSessionObject();
-                context.Session.UniqueID = sessionID;
+                context.Session = context.Server.createSessionObject(sessionID, context);
             }
             context.Session.Expires = System.currentTimeMillis() + context.Server.SessionExpiresAfterMillis;
             context.Server.Sessions.put(context.Session.UniqueID, context.Session);

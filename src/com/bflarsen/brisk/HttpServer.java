@@ -183,7 +183,7 @@ public class HttpServer extends Thread {
         );
     }
 
-    public HttpSession createSessionObject() {
-        return new HttpSession();
+    public HttpSession createSessionObject(String uuid, HttpContext context) throws Exception {
+        return new HttpSession(uuid);
     }
 }
