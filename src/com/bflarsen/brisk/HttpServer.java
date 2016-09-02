@@ -145,9 +145,9 @@ public class HttpServer extends Thread {
         addRoute(pattern, StaticFileResponder.createFactory(Paths.get(baseDirectory)));
     }
 
-    public String encodeJson(Object obj) throws Exception {
-        return "{\"error\":\"If you wish to send Json Encoded objects, you'll have to override HttpServer.encodeJson and use something like GSON to encode, I'd do that for you, but I don't want to introduce dependencies or force you to use an encoder you don't like. /r/n -- cheers\"}";
-    }
+//    public String encodeJson(Object obj) throws Exception {
+//        return "{\"error\":\"If you wish to send Json Encoded objects, you'll have to override HttpServer.encodeJson and use something like GSON to encode, I'd do that for you, but I don't want to introduce dependencies or force you to use an encoder you don't like. /r/n -- cheers\"}";
+//    }
 
     public Map<String, Object> createWorkerThreadResources() throws Exception {
         return new LinkedHashMap<>();
@@ -185,5 +185,9 @@ public class HttpServer extends Thread {
 
     public HttpSession createSessionObject(String uuid, HttpContext context) throws Exception {
         return new HttpSession(uuid);
+    }
+
+    public void destroySessionObject(HttpSession session) {
+        // override this if you need to cleanup resources you created in createSessionObject
     }
 }
