@@ -29,6 +29,10 @@ public class StaticFileResponder implements HttpResponder {
 
     @Override
     public boolean canHandle(HttpContext context) {
+        // don't ever serve up "dot" files
+        if (Paths.get(context.Request.Resource).getFileName().startsWith(".")) {
+            return false;
+        }
         String path = Paths.get(BasePath.toString(), context.Request.Resource).toString();
         return context.Server.FileCache.get(path).isReadable;
     }
