@@ -48,6 +48,7 @@ public class StaticFileResponder implements HttpResponder {
         long modifiedSince = -1;
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             try {
+                // I give 1000 milliseconds of leeway here, because the http protocol passes a date rounded to the second.
                 modifiedSince = modifiedSinceDateFormatter.parse(ifModifiedSince).getTime() + 1000;
             }
             catch (Exception ex) {
@@ -55,12 +56,8 @@ public class StaticFileResponder implements HttpResponder {
             }
         }
         if (file.whenModified <= modifiedSince) {
-            BaseResponse response = new SimpleStatusResponse(HttpStatusCode.NOT_MODIFIED);
-            response.StatusCode = 304;
-            return response;
+            return new SimpleStatusResponse(HttpStatusCode.NOT_MODIFIED);
         }
-
-        // context.Server.logHandler(String.format("File '%s' has been modified (%d <= %d)", path, modifiedSince, file.whenModified));
 
         // respond with a normal file response
         return new FileResponse(file.absolutePath, context.Server.FileCache);

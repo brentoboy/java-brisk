@@ -17,7 +17,7 @@ public class FileResponse extends BaseResponse {
         super(HttpStatusCode.OK, MimeType.lookupByExtension(Paths.get(filePath).getFileName().toString()));
         this.cache = cache;
         this.fileInfo = cache.get(filePath);
-
+// todo: throw some kind of exception if the file doesnt exist.  at least log something
         this.setHeader("Last-Modified", UtcFormatter.format(new Date(this.fileInfo.whenModified)));
         this.setHeader("Expires", UtcFormatter.format(new Date(System.currentTimeMillis() + 24*60*60*1000L))); // 24 hours
     }
