@@ -10,6 +10,7 @@ public class HttpRequest {
     public String HttpVersion;
     public String Path;  // the part of resource up to the first ?  (the part before the params
     public String Host;  // the host name of the server that was requested
+    public String RemoteIp;
     public final Map<String, String> Cookies = new HashMap<>();
     public final Map<String, Object> Params = new HashMap<>();
     public final Map<String, String> Headers = new HashMap<>();

@@ -61,6 +61,11 @@ public class HttpRequestParsingPump implements Runnable {
         if (context.RequestStream == null)
             throw new Exception("Empty RequestStream object in parseRequest.");
 
+        if (context.Socket != null) {
+            context.Request.RemoteIp = context.Socket.getRemoteSocketAddress().toString();
+            context.Request.Headers.put("Request_RemoteIp", context.Request.RemoteIp);
+        }
+
         String line = tryReadLine(context.RequestStream);
         if (line == null || line.isEmpty()) {
             throw new EmptyRequestException();
