@@ -5,6 +5,7 @@ import static com.bflarsen.util.Logger.*;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.SocketException;
 import java.util.Map;
 
 public class HttpResponseSendingPump implements Runnable {
@@ -117,8 +118,13 @@ public class HttpResponseSendingPump implements Runnable {
                 catch (InterruptedException ex) {
                     return;
                 }
+                catch (SocketException ex) {
+                    context.ResponderException = ex;
+                    context.Stats.CompletelyFinished = System.nanoTime();
+                    logWarning("Failed to send response because socket was closed.", this.getClass().getName(), "run()", "sending a response");
+                }
                 catch (Exception ex) {
-                    logEx(ex, this.getClass().getName(), "run()", "building a response");
+                    logEx(ex, this.getClass().getName(), "run()", "sending a response");
                 }
                 finally {
                     if (context != null) {

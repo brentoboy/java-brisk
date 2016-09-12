@@ -32,6 +32,7 @@ public abstract class BaseResponder implements HttpResponder {
         ;
         context.Server.AutoConverter.fill(this, filteredRequestParams);
         context.Server.AutoConverter.fill(this, renamedSessionParams);
+        context.Server.AutoConverter.fill(this, context.Request.Headers.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, (x) -> x.getValue())));
         context.Server.AutoConverter.fill(this, context.WorkerThreadResources);
         return this.buildResponse();
     }

@@ -7,8 +7,7 @@ import static com.bflarsen.util.Logger.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.net.Socket;
-import java.net.URLDecoder;
+import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -53,6 +52,15 @@ public class HttpRequestParsingPump implements Runnable {
         }
     }
 
+    private static String tryReadBody(BufferedReader stream, int len) throws Exception {
+        char[] buffer = new char[len];
+        int bytesRead = stream.read(buffer);
+        if (bytesRead != len) {
+            logWarning(String.format("ContentLength = %d, and Actual Body Length = %d", len, bytesRead), "HttpRequestParsingPump", "tryReadBody", "reading incoming data");
+        }
+        return new String(buffer);
+    }
+
     public static void parseRequest(HttpContext context) throws Exception {
         if (context == null)
             throw new Exception("Empty Context object in parseRequest.");
@@ -61,8 +69,9 @@ public class HttpRequestParsingPump implements Runnable {
         if (context.RequestStream == null)
             throw new Exception("Empty RequestStream object in parseRequest.");
 
-        if (context.Socket != null) {
-            context.Request.RemoteIp = context.Socket.getRemoteSocketAddress().toString();
+        if (context.Socket != null && context.Socket.getRemoteSocketAddress() instanceof InetSocketAddress) {
+            InetSocketAddress socketAddress = (InetSocketAddress) context.Socket.getRemoteSocketAddress();
+            context.Request.RemoteIp = socketAddress.getAddress().toString().replace("/", "");
             context.Request.Headers.put("Request_RemoteIp", context.Request.RemoteIp);
         }
 
@@ -179,7 +188,56 @@ public class HttpRequestParsingPump implements Runnable {
         }
 
 
-        // TODO: parse body
+        // parse request body
+        if (context.Request.Method.equals("POST")) {
+            switch (context.Request.getHeader("Request_ContentType")) {
+                case "application/x-www-form-urlencoded": {
+                    // parse the same way we parsed url-params
+                    String paramString = tryReadBody(context.RequestStream, Integer.parseInt(context.Request.Headers.get("Request_ContentLength")));
+                    paramString = paramString.replace("&amp;", "&");
+                    parts = paramString.split("&");
+                    for (String part : parts) {
+                        int pos = part.indexOf('=');
+                        if (pos != -1) {
+                            try {
+                                String key = URLDecoder.decode(part.substring(0, pos), "UTF-8");
+                                String value = URLDecoder.decode(part.substring(pos + 1), "UTF-8");
+                                if (paramWithSubscriptRegex.matcher(key).matches()) {
+                                    pos = key.indexOf('[');
+                                    String baseKey = key.substring(0, pos);
+                                    String[] subKeys = key.substring(pos + 1, key.length() - 1).split(Pattern.quote("]["));
+                                    if (!context.Request.Params.containsKey(baseKey)
+                                            || !(context.Request.Params.get(baseKey) instanceof Map<?, ?>)
+                                            ) {
+                                        context.Request.Params.put(baseKey, new HashMap<String, Object>());
+                                    }
+                                    Map<String, Object> prop = (Map<String, Object>) context.Request.Params.get(baseKey);
+                                    for (int i = 0; i < subKeys.length - 1; i++) {
+                                        if (!prop.containsKey(subKeys[i])
+                                                || !(prop.get(subKeys[i]) instanceof Map<?, ?>)
+                                                ) {
+                                            prop.put(subKeys[i], new HashMap<String, Object>());
+                                        }
+                                        prop = (Map<String, Object>) prop.get(subKeys[i]);
+                                    }
+                                    prop.put(subKeys[subKeys.length - 1], value);
+                                } else {
+                                    context.Request.Params.put(key, value);
+                                }
+                            } catch (Exception ex) {
+                                // HMM
+                            }
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    // TODO: parse bodies of types json and multi-part-form
+                    logWarning("Unexpected Content-Type for Request Body: " + context.Request.Headers.get("Request_ContentType"), "HttpRequestParsingPump", "parseRequest()", "Preparing to parse request body.");
+                    break;
+                }
+            }
+        }
     }
 
     public static class EmptyRequestException extends Exception {}
