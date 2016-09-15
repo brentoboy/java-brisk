@@ -61,4 +61,7 @@ public abstract class BaseResponse implements HttpResponse {
 
     @Override
     public abstract void sendBody(OutputStream stream) throws Exception;
+
+    @Override
+    public void close() throws Exception {}
 }

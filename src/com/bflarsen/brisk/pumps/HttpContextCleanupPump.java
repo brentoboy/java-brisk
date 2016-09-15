@@ -59,7 +59,9 @@ public class HttpContextCleanupPump implements Runnable {
 //                context.Server.logHandler("Socket already closed, no recycling");
 //            }
             try { context.Socket.close(); }
-            catch (Exception ex) {}
+            catch (Exception ex) {
+                logEx(ex, "HttpContextCleanupPump", "cleanupContext", "context.Socket.close()");
+            }
         }
 
         context.Stats.CompletelyFinished = System.nanoTime();
@@ -74,6 +76,14 @@ public class HttpContextCleanupPump implements Runnable {
                 logError("No SendBodyEnded", "HttpContextCleanupPump", "cleanupContext", String.format("%d", context.Id));
             }
             context.Server.logRequestResponseCompleted(context);
+        }
+
+        // close resources
+        if (context.Response != null) {
+            try { context.Response.close(); }
+            catch (Exception ex) {
+                logEx(ex, "HttpContextCleanupPump", "cleanupContext", "context.Response.close()");
+            }
         }
     }
 
