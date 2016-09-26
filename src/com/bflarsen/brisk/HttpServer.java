@@ -58,6 +58,8 @@ public class HttpServer extends Thread {
 
     public final AutoConvert AutoConverter = new AutoConvert();
 
+    public String ViewFolder = null;
+
     @Override
     public void run() {
         this.isClosing = false;

@@ -2,7 +2,7 @@ package com.bflarsen.brisk.responses;
 
 import java.io.OutputStream;
 
-public abstract class BaseBufferedResponse extends BaseResponse {
+public class BaseBufferedResponse extends BaseResponse {
 
     byte[] buffer;
 

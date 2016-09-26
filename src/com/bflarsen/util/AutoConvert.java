@@ -29,6 +29,9 @@ public class AutoConvert  {
     }
 
     public void fill(Object target, Map<String, Object> values) throws Exception {
+        if (values == null || values.isEmpty()) {
+            return;
+        }
         try {
             Class cls = target.getClass();
             for (Field field : cls.getFields()) {

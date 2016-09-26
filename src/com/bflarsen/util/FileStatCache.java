@@ -1,5 +1,6 @@
 package com.bflarsen.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,6 +11,8 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class FileStatCache {
     public static final int KB = 1024;
@@ -116,6 +119,12 @@ public class FileStatCache {
             contentCache.remove(absolutePath);
             contentCacheTotalBytes -= cachedContent.length;
         }
+    }
+
+    public String readString(String path) throws Exception {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        streamTo(path, stream);
+        return new String(stream.toByteArray(), UTF_8);
     }
 
     public void streamTo(String path, OutputStream outputStream) throws Exception {

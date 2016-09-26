@@ -26,10 +26,13 @@ public abstract class BaseResponder implements HttpResponder {
                 .filter(x -> !x.getKey().startsWith("session_"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         ;
-        Map<String, Object> renamedSessionParams =
-                context.Session.Params.entrySet().stream()
-                .collect(Collectors.toMap(x->"session_" + x.getKey(), Map.Entry::getValue))
-        ;
+        Map<String, Object> renamedSessionParams = null;
+        if (context.Session != null) {
+            renamedSessionParams =
+                    context.Session.Params.entrySet().stream()
+                    .collect(Collectors.toMap(x -> "session_" + x.getKey(), Map.Entry::getValue))
+            ;
+        }
         context.Server.AutoConverter.fill(this, filteredRequestParams);
         context.Server.AutoConverter.fill(this, renamedSessionParams);
         context.Server.AutoConverter.fill(this, context.WorkerThreadResources);

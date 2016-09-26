@@ -202,6 +202,7 @@ public class HttpRequestParsingPump implements Runnable {
                     if (socket != null) {
                         socket.setSoTimeout(5000);
                         context = new HttpContext(parentPump.httpServerInstance, socket);
+                        context.Server = parentPump.httpServerInstance;
                         context.Stats.RequestParserStarted = System.nanoTime();
                         try {
                             parseRequest(context);
