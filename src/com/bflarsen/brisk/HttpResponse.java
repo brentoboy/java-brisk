@@ -1,11 +1,9 @@
 package com.bflarsen.brisk;
 
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.util.Map;
 
-public interface HttpResponse {
+public interface HttpResponse extends AutoCloseable {
     void setHeader(String key, String value);
 
     String getHttpVersion();

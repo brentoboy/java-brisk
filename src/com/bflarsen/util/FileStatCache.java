@@ -144,11 +144,12 @@ public class FileStatCache {
             discardCachedContent(stat.absolutePath);
 
             // and send it out in chunks
-            InputStream fileStream = new FileInputStream(stat.absolutePath);
-            byte buffer[] = new byte[CONTENT_CACHE_MAX_FILE_SIZE];
-            int read;
-            while ((read = fileStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, read);
+            try(InputStream fileStream = new FileInputStream(stat.absolutePath)) {
+                byte buffer[] = new byte[CONTENT_CACHE_MAX_FILE_SIZE];
+                int read;
+                while ((read = fileStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, read);
+                }
             }
             return;
         }

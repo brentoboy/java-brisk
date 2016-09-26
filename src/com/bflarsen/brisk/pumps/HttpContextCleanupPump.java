@@ -2,6 +2,9 @@ package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.HttpServer;
+
+import java.net.SocketException;
+
 import static com.bflarsen.util.Logger.*;
 
 public class HttpContextCleanupPump implements Runnable {
@@ -56,7 +59,9 @@ public class HttpContextCleanupPump implements Runnable {
 //                context.Server.logHandler("Socket already closed, no recycling");
 //            }
             try { context.Socket.close(); }
-            catch (Exception ex) {}
+            catch (Exception ex) {
+                logEx(ex, "HttpContextCleanupPump", "cleanupContext", "context.Socket.close()");
+            }
         }
 
         context.Stats.CompletelyFinished = System.nanoTime();
@@ -67,10 +72,18 @@ public class HttpContextCleanupPump implements Runnable {
             if (context.Stats.totalMs > 5000000000L) { //5 seconds is long!
                 logWarning("Super long request/response cycle (" + context.Stats.totalMs + " ms)", "HttpContextCleanupPump", "cleanupContext", String.format("%d", context.Id));
             }
-            if (context.Stats.SendBodyEnded == 0) {
+            if (context.Stats.SendBodyEnded == 0 && !(context.ResponderException instanceof SocketException)) {
                 logError("No SendBodyEnded", "HttpContextCleanupPump", "cleanupContext", String.format("%d", context.Id));
             }
             context.Server.logRequestResponseCompleted(context);
+        }
+
+        // close resources
+        if (context.Response != null) {
+            try { context.Response.close(); }
+            catch (Exception ex) {
+                logEx(ex, "HttpContextCleanupPump", "cleanupContext", "context.Response.close()");
+            }
         }
     }
 
@@ -114,7 +127,7 @@ public class HttpContextCleanupPump implements Runnable {
                 HttpContext nextContext = null;
                 HttpContext context = null;
                 long now = System.nanoTime();
-                long oldestAllowedStartTime = now - 6000000000L; // 60 seconds
+                long oldestAllowedStartTime = now - 60000000000L; // 60 seconds
                 try {
                     Thread.sleep(100);
                     // flush out everything that has already completed successfully
