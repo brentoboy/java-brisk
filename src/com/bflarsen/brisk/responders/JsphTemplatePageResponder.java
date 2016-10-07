@@ -61,7 +61,8 @@ public class JsphTemplatePageResponder extends BaseResponder {
 
         // rebuild the page with all the templates inserted
         builder.append(head_html);
-        builder.append(jsphScript);
+        builder.append("<script>\n" + jsphScript + "</script>");
+
 
         // add any widget specific css
         builder.append("<style type='text/css'>\r\n");
@@ -114,8 +115,7 @@ public class JsphTemplatePageResponder extends BaseResponder {
         );
     }
 
-    protected static final String jsphScript =
-            "<script>\n" +
+    public static final String jsphScript =
             "(function () {\n" +
             "\tvar nullTemplate = function() { return ''; };\n" +
             "\n" +
@@ -198,7 +198,6 @@ public class JsphTemplatePageResponder extends BaseResponder {
             "\t}\n" +
             "\n" +
             "\twindow.jsph = jsph;\n" +
-            "}());\n" +
-            "</script>\n"
+            "}());\n"
     ;
 }

@@ -11,8 +11,11 @@ import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
 public class StaticFileResponder implements HttpResponder {
-    public static final SimpleDateFormat modifiedSinceDateFormatter = new SimpleDateFormat("dd MMM yyyy HH:mm:ss zzz");
-    { modifiedSinceDateFormatter.setTimeZone(TimeZone.getTimeZone("GMT")); }
+    public static SimpleDateFormat getModifiedSinceDateParser() {
+        SimpleDateFormat parser = new SimpleDateFormat("dd MMM yyyy HH:mm:ss zzz");
+        parser.setTimeZone(TimeZone.getTimeZone("GMT"));
+        return parser;
+    }
 
     public Path BasePath;
 
@@ -39,7 +42,7 @@ public class StaticFileResponder implements HttpResponder {
 
     @Override
     public HttpResponse respond(HttpContext context) throws Exception {
-        String path = Paths.get(BasePath.toString(), context.Request.Resource).toString();
+        String path = Paths.get(BasePath.toString(), context.Request.Path).toString();
         FileStatCache.FileStat file = context.Server.FileCache.get(path);
 
         // check for not-exists response
@@ -53,10 +56,10 @@ public class StaticFileResponder implements HttpResponder {
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             try {
                 // I give 1000 milliseconds of leeway here, because the http protocol passes a date rounded to the second.
-                modifiedSince = modifiedSinceDateFormatter.parse(ifModifiedSince).getTime() + 1000;
+                modifiedSince = getModifiedSinceDateParser().parse(ifModifiedSince).getTime() + 1000;
             }
             catch (Exception ex) {
-                logEx(ex, "StaticFileResponder", "respond", "parsing ModifiedSince header");
+                logEx(ex, "StaticFileResponder", "respond", "parsing ModifiedSince header: '" + ifModifiedSince + "'");
             }
         }
         if (file.whenModified <= modifiedSince) {

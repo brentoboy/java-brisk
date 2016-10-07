@@ -72,9 +72,9 @@ public class FileStatCache {
             whenLastChecked = System.currentTimeMillis();
             try {
                 Path path = Paths.get(pathString);
+                absolutePath = path.toAbsolutePath().toString();
                 BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
                 exists = true;
-                absolutePath = path.toAbsolutePath().toString();
                 isReadable = path.toFile().canRead();
                 whenCreated = attributes.creationTime().toMillis();
                 whenAccessed = attributes.lastAccessTime().toMillis();

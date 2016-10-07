@@ -191,7 +191,8 @@ public class HttpRequestParsingPump implements Runnable {
         // parse request body
         if (context.Request.Method.equals("POST")) {
             switch (context.Request.getHeader("Request_ContentType")) {
-                case "application/x-www-form-urlencoded": {
+                case "application/x-www-form-urlencoded":
+                case "application/x-www-form-urlencoded; charset=UTF-8": {
                     // parse the same way we parsed url-params
                     String paramString = tryReadBody(context.RequestStream, Integer.parseInt(context.Request.Headers.get("Request_ContentLength")));
                     paramString = paramString.replace("&amp;", "&");
