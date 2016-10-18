@@ -37,15 +37,25 @@ public class HttpRequestRoutingPump implements Runnable {
         for(Map.Entry<Pattern, HttpResponder.Factory> route : context.Server.Routes.entrySet()) {
             if (route.getKey().matcher(url).matches()) {
                 HttpResponder.Factory factory = route.getValue();
-                HttpResponder responder = factory.create();
-                if (responder.canHandle(context)) {
-                    context.Responder = responder;
-                    return;
+                try {
+                    HttpResponder responder = factory.create();
+                    if (responder.canHandle(context)) {
+                        context.Responder = responder;
+                        return;
+                    }
+                }
+                catch (Exception ex) {
+                    logInfo(ex.getMessage(), "HttpRequestRoutingPump", "chooseRoute", "creating a responder instance");
                 }
             }
         }
         logInfo("No route found to match: " + url, "HttpRequestRoutingPump", "chooseRoute", "");
-        context.Responder = context.Server.Error404ResponderFactory.create();
+        try {
+            context.Responder = context.Server.Error404ResponderFactory.create();
+        }
+        catch (Exception ex) {
+            logInfo(ex.getMessage(), "HttpRequestRoutingPump", "chooseRoute", "creating a 404 responder instance");
+        }
     }
 
     private static class Worker extends Thread {

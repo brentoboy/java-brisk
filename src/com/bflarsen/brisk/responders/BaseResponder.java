@@ -3,7 +3,6 @@ package com.bflarsen.brisk.responders;
 import com.bflarsen.brisk.*;
 
 import java.util.Map;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public abstract class BaseResponder implements HttpResponder {

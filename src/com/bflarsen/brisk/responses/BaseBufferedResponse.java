@@ -4,7 +4,7 @@ import java.io.OutputStream;
 
 public class BaseBufferedResponse extends BaseResponse {
 
-    byte[] buffer;
+    public byte[] buffer;
 
     public BaseBufferedResponse(int statusCode, String contentType, String textContent) {
         super(statusCode, contentType);
