@@ -88,6 +88,11 @@ public class JsphTemplateEngine {
             "\t\t\tvar functionBody = \"\\\n" +
             "(function(jsph) { \\n\\\n" +
             "\treturn function(vars) { \\n\\\n" +
+            "\tvar model = vars; \\n\\\n" +
+            "\tfor(var varName in model) { \\n\\\n" +
+            "\t\ttry { eval('var ' + varName + '=model[varName];') } \\n\\\n" +
+            "\t\tcatch(ex){} \\n\\\n" +
+            "\t} \\n\\\n" +
             "\t\treturn (function() { \\n\\\n" +
             "\t\t\tvar o = \\\"\\\";\\n\";\n" +
             "\n" +
@@ -149,6 +154,16 @@ public class JsphTemplateEngine {
             "\t\trender: function render(templateString, vars) {\n" +
             "\t\t\tvar renderer = jsph.compile(templateString);\n" +
             "\t\t\treturn renderer(vars);\n" +
+            "\t\t},\n" +
+            "\n" +
+            "\t\tcreateModelFactory: function createModelFactory(code) {\n" +
+            "\t\t\tif (code === null || code == undefined) {\n" +
+            "\t\t\t\treturn function() { return null; };\n" +
+            "\t\t\t}\n" +
+            "\t\t\tif (typeof code != \"string\") {\n" +
+            "\t\t\t\tcode = JSON.stringify(code);\n" +
+            "\t\t\t}\n" +
+            "\t\t\treturn function() { eval(\"var inst = \" + code + \";\"); return inst; }\n" +
             "\t\t},\n" +
             "\t}\n" +
             "\n" +
