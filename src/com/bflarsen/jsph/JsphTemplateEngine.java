@@ -1,22 +1,27 @@
 package com.bflarsen.jsph;
 
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
+import com.bflarsen.util.FileStatCache;
+import com.bflarsen.util.Logger;
+
+import javax.script.*;
 import java.io.Writer;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.util.*;
 
 
 public class JsphTemplateEngine {
+    public final FileStatCache fileCache;
     public final ScriptEngine jsEngine;
     public final Invocable jsEngineAsInvocable;
     public final Object jsphObjectInJsEngine;
     public String ViewFolder;
 
+    public final Map<String, Long> updateStampWhenLoaded = new HashMap<>();
+
     public JsphTemplateEngine(String viewFolder) throws Exception {
         this.ViewFolder = viewFolder;
+
+        this.fileCache = new FileStatCache();
 
         this.jsEngine = new ScriptEngineManager().getEngineByName("nashorn");
         this.jsEngineAsInvocable = (Invocable) this.jsEngine;
@@ -51,13 +56,29 @@ public class JsphTemplateEngine {
         this.jsEngine.eval("JSON.stringify = function replacementStringify(obj) { var result = JSON.originalStringify(obj); if (result == undefined) return GSON.toJson(obj); else return result; }");
     }
 
-    public void addTemplate(String templateFile) throws Exception {
+    public void addTemplateOrUpdateIfModified(String templateFile) throws Exception {
         String templateName = templateFile;
-        String templateCode = String.join("\n", Files.readAllLines(Paths.get(this.ViewFolder, templateFile), Charset.forName("UTF8")));
-        addTemplate(templateName, templateCode);
+        String path = Paths.get(this.ViewFolder, templateFile).toString();
+        Long updateStamp = updateStampWhenLoaded.get(path);
+        if (updateStamp == null || updateStamp < fileCache.get(path).whenModified) {
+            if (updateStamp != null) {
+                Logger.logWarning("Reloading modified template: " + templateFile, "JsphTemplateEngine", "addTemplateOrUpdateIfModified", "checking update stamp");
+            }
+            updateStampWhenLoaded.put(path, fileCache.get(path).whenModified);
+            String templateCode = fileCache.readString(path).replace("\r\n", "\n");
+            addOrUpdateTemplate(templateName, templateCode);
+        }
     }
 
-    public void addTemplate(String templateName, String templateCode) throws Exception {
+    public void addTemplate(String templateFile) throws Exception {
+        String path = Paths.get(this.ViewFolder, templateFile).toString();
+        Long updateStamp = updateStampWhenLoaded.get(path);
+        if (updateStamp == null) {
+            addTemplateOrUpdateIfModified(templateFile);
+        }
+    }
+
+    public void addOrUpdateTemplate(String templateName, String templateCode) throws Exception {
         Object renderer = this.jsEngineAsInvocable.invokeMethod(this.jsphObjectInJsEngine, "compile", templateCode);
         this.jsEngineAsInvocable.invokeFunction("setObjProperty", this.jsphObjectInJsEngine, templateName, renderer);
     }
@@ -67,6 +88,7 @@ public class JsphTemplateEngine {
     }
 
     public String render(String templateName, Object viewModel) throws Exception {
+        addTemplateOrUpdateIfModified(templateName);
         return this.jsEngineAsInvocable.invokeMethod(this.jsphObjectInJsEngine, templateName, viewModel).toString();
     }
 
