@@ -80,6 +80,9 @@ public class AutoConvert  {
     }
 
     public static Object String_To_Long(Object value) throws Exception {
+        if ("".equals(value)) {
+            return null;
+        }
         try {
             return Long.parseLong((String) value);
         }
@@ -98,6 +101,9 @@ public class AutoConvert  {
     }
 
     public static Object String_To_Integer(Object value) throws Exception {
+        if ("".equals(value)) {
+            return null;
+        }
         try {
             return Integer.parseInt((String)value);
         }
@@ -116,6 +122,9 @@ public class AutoConvert  {
     }
 
     public static Object String_To_Boolean(Object value) throws Exception {
+        if ("".equals(value)) {
+            return null;
+        }
         switch ((String)value) {
             case "true":
             case "TRUE":
