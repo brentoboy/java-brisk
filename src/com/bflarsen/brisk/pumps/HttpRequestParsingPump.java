@@ -171,15 +171,24 @@ public class HttpRequestParsingPump implements Runnable {
             String sessionID = context.Request.Cookies.get(context.Server.SessionCookieName);
             if (sessionID != null) {
                 context.Session = context.Server.Sessions.get(sessionID);
+                if (context.Session != null && context.Session.Expires < System.currentTimeMillis()) {
+                    context.Server.destroySessionObject(context.Session);
+                    context.Server.Sessions.remove(sessionID);
+                    context.Session = null;
+                }
             }
             else {
                 sessionID = java.util.UUID.randomUUID().toString().replace("-", "");
             }
-            if (context.Session == null || context.Session.Expires < System.currentTimeMillis()) {
+            if (context.Session == null) {
+                // the create function handles initial persistence to external storage
                 context.Session = context.Server.createSessionObject(sessionID, context);
+                context.Server.Sessions.put(context.Session.UniqueID, context.Session);
             }
-            context.Session.Expires = System.currentTimeMillis() + context.Server.SessionExpiresAfterMillis;
-            context.Server.Sessions.put(context.Session.UniqueID, context.Session);
+            else {
+                context.Session.Expires = System.currentTimeMillis() + context.Server.SessionExpiresAfterMillis;
+                context.Server.persistSessionExpires(context.Session.UniqueID, context.Session.Expires);
+            }
             // tell the browser to add (or update the expiration on) the session cookie
             HttpCookie cookie = new HttpCookie(context.Server.SessionCookieName, context.Session.UniqueID);
             cookie.Expires = context.Session.Expires;

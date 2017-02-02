@@ -8,7 +8,7 @@ public class HttpSession {
     public long Expires; // Millis since Epoch
     public final Map<String, Object> Params;
 
-    HttpSession(String uuid) {
+    public HttpSession(String uuid) {
         UniqueID = uuid;
         Params = new LinkedHashMap<>();
     }

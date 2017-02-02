@@ -25,7 +25,9 @@ public class AutoConvert  {
         addConverter(Integer.class, Boolean.class, AutoConvert::Number_To_Boolean);
         addConverter(Long.class, Boolean.class, AutoConvert::Number_To_Boolean);
         addConverter(Integer.class, Long.class, AutoConvert::Number_To_Long);
+        addConverter(Double.class, Long.class, AutoConvert::Number_To_Long);
         addConverter(Long.class, Integer.class, AutoConvert::Number_To_Integer);
+        addConverter(Long.class, Double.class, AutoConvert::Number_To_Double);
     }
 
     public void fill(Object target, Map<String, Object> values) throws Exception {
@@ -118,6 +120,15 @@ public class AutoConvert  {
         }
         catch (Exception ex) {
             throw new ValueNotConvertableException(Integer.class, value, "in 'AutoConvert.Number_To_Integer'", ex.toString());
+        }
+    }
+
+    public static Object Number_To_Double(Object value) throws Exception {
+        try {
+            return ((Number)value).doubleValue();
+        }
+        catch (Exception ex) {
+            throw new ValueNotConvertableException(Double.class, value, "in 'AutoConvert.Number_To_Double'", ex.toString());
         }
     }
 

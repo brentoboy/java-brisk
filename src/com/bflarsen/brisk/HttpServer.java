@@ -186,7 +186,30 @@ public class HttpServer extends Thread {
     }
 
     public HttpSession createSessionObject(String uuid, HttpContext context) throws Exception {
-        return new HttpSession(uuid);
+        HttpSession session = this.loadPersistedSession(uuid);
+        if (session == null) {
+            session = new HttpSession(uuid);
+            session.Expires = System.currentTimeMillis() + context.Server.SessionExpiresAfterMillis;
+            this.persistSession(session);
+        }
+        else {
+            session.Expires = System.currentTimeMillis() + context.Server.SessionExpiresAfterMillis;
+            this.persistSessionExpires(uuid, session.Expires);
+        }
+        return session;
+    }
+
+    public void persistSession(HttpSession session) throws Exception {
+        // override this if you need to persist sessions
+    }
+
+    public void persistSessionExpires(String uuid, long expiresAt) {
+        // override this if you need to persist sessions
+    }
+
+    public HttpSession loadPersistedSession(String uuid) throws Exception {
+        // override this if you need to persist sessions
+        return null;
     }
 
     public void destroySessionObject(HttpSession session) {
