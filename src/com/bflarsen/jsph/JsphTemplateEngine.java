@@ -30,6 +30,7 @@ public class JsphTemplateEngine {
         this.jsEngine.eval("var console = console || { log: print };");
         this.jsEngine.eval(JsphTemplateEngine.jsphScript);
         this.jsEngine.eval("var jsph = window.jsph;");
+        this.jsEngine.eval("var sql = Java.type('com.bflarsen.jsph.JsphSqlEngine');");
         this.jsEngine.eval(
                 "function setObjProperty(obj, prop, val) {\n" +
                 "    obj[prop] = val;\n" +
@@ -56,7 +57,7 @@ public class JsphTemplateEngine {
         this.jsEngine.eval("JSON.stringify = function replacementStringify(obj) { var result = JSON.originalStringify(obj); if (result == undefined) return GSON.toJson(obj); else return result; }");
     }
 
-    public void addTemplateOrUpdateIfModified(String templateFile) throws Exception {
+    public <TModel> JsphTemplate<TModel> addTemplateOrUpdateIfModified(String templateFile) throws Exception {
         String templateName = templateFile;
         String path = Paths.get(this.ViewFolder, templateFile).toString();
         Long updateStamp = updateStampWhenLoaded.get(path);
@@ -66,21 +67,24 @@ public class JsphTemplateEngine {
             }
             updateStampWhenLoaded.put(path, fileCache.get(path).whenModified);
             String templateCode = fileCache.readString(path).replace("\r\n", "\n");
-            addOrUpdateTemplate(templateName, templateCode);
+            return addOrUpdateTemplate(templateName, templateCode);
         }
+        return null;
     }
 
-    public void addTemplate(String templateFile) throws Exception {
+    public <TModel> JsphTemplate<TModel> addTemplate(String templateFile) throws Exception {
         String path = Paths.get(this.ViewFolder, templateFile).toString();
         Long updateStamp = updateStampWhenLoaded.get(path);
         if (updateStamp == null) {
-            addTemplateOrUpdateIfModified(templateFile);
+            return addTemplateOrUpdateIfModified(templateFile);
         }
+        return null;
     }
 
-    public void addOrUpdateTemplate(String templateName, String templateCode) throws Exception {
+    public <TModel> JsphTemplate<TModel> addOrUpdateTemplate(String templateName, String templateCode) throws Exception {
         Object renderer = this.jsEngineAsInvocable.invokeMethod(this.jsphObjectInJsEngine, "compile", templateCode);
         this.jsEngineAsInvocable.invokeFunction("setObjProperty", this.jsphObjectInJsEngine, templateName, renderer);
+        return new JsphTemplate<TModel>(this, templateName);
     }
 
     public void render(String templateName, Object viewModel, Writer writer) throws Exception {
