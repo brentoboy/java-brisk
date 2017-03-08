@@ -172,8 +172,7 @@ public class JsphTemplateEngine {
             "\t\t\t\tvar fn = eval(functionBody);\n" +
             "\t\t\t\treturn fn;\n" +
             "\t\t\t} catch(err) {\n" +
-            "\t\t\t\tconsole.log(err)\n" +
-            "\t\t\t\tconsole.log(\"\\n\" + functionBody);\n" +
+            "\t\t\t\tthrow err.message + \"\\n\" + functionBody;\n" +
             "\t\t\t}\n" +
             "\t\t},\n" +
             "\n" +
