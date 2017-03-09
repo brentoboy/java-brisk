@@ -21,11 +21,15 @@ public class JsphSqlEngine {
             value = jdk.nashorn.api.scripting.ScriptUtils.convert(value, Object[].class);
         }
         if (value.getClass().isArray()) {
-            return Arrays.stream((Object[])value)
+            String csv = Arrays.stream((Object[])value)
                     .distinct()
                     .map(x -> escape(x))
                     .collect(Collectors.joining(","))
             ;
+            if (csv == null || csv.equals("")) {
+                return "null";
+            }
+            return csv;
         }
         // else
         return "'" + value.toString().replace("'", "''") + "'";
