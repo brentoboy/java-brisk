@@ -75,15 +75,15 @@ public class JsphTemplatePageResponder extends BaseResponder {
         // split it into head / body pieces
         String[] pieces = html.split("</head>");
         if (pieces.length < 2) {
-            throw new Exception(page_path + "/template.html does not look like a valid html page (with head / body elements)");
-            // Logger.logError(page_path + "/template.html does not look like a valid html page (with head / body elements)", "JsphTemplatePageResponder", "buildResponse()", Paths.get(".").toAbsolutePath().normalize().toString());
+            throw new Exception(page_path + "/template.html does not look like a valid html appFolder (with head / body elements)");
+            // Logger.logError(page_path + "/template.html does not look like a valid html appFolder (with head / body elements)", "JsphTemplatePageResponder", "buildResponse()", Paths.get(".").toAbsolutePath().normalize().toString());
         }
         String head_html = pieces[0];
         html = pieces[1];
         pieces = html.split("</body>");
         String body_html = pieces[0];
 
-        // rebuild the page with all the templates inserted
+        // rebuild the appFolder with all the templates inserted
         builder.append(head_html);
         builder.append("<script>\n" + JsphTemplateEngine.jsphScript + "</script>");
 
@@ -174,7 +174,7 @@ public class JsphTemplatePageResponder extends BaseResponder {
             builder.append("\r\n\r\n");
         }
 
-        // add the page's js file (if it has one)
+        // add the appFolder's js file (if it has one)
         if (cache.get(page_path + "/script.js").isReadable) {
             builder.append("<script id=\"").append(page.replace("/", "__").replace("\\", "__").replace(":", "_").replace(".", "_")).append("__script_js\">\r\n");
             builder.append(cache.readString(page_path + "/script.js"));

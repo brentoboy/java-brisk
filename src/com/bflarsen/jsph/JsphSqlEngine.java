@@ -1,6 +1,5 @@
 package com.bflarsen.jsph;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.TimeZone;
 import java.util.stream.Collectors;

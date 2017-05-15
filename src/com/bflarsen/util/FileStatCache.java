@@ -87,9 +87,13 @@ public class FileStatCache {
             }
             catch (NoSuchFileException ex) {
                 exists = false;
+                problems = "no such file: " + absolutePath;
             }
             catch (Exception ex) {
                 problems = ex.toString();
+                if (problems == null) {
+                    problems = ex.getClass().getName();
+                }
 //                System.out.println(problems + " while getting file attributes for " + pathString);
             }
         }
