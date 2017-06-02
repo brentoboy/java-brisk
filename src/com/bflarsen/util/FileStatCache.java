@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -11,6 +12,9 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -64,14 +68,40 @@ public class FileStatCache {
         public boolean isRegularFile;
         public boolean isLink;
         public boolean isOther;
+        public boolean isJarResource = false;
         public String absolutePath;
         public String path;
 
         public FileStat(String pathString) {
-            path = pathString;
+            this.path = pathString;
             whenLastChecked = System.currentTimeMillis();
+            if (pathString.startsWith("jar:file:")) {
+                this.isJarResource = true;
+                String[] pieces = pathString.split("!", 2);
+                String jarPath = pieces[0].substring("jar:file:".length());
+                String resourcePath = pieces[1].substring("/".length());
+                try {
+                    JarFile jar = new JarFile(jarPath);
+                    this.path = jarPath;
+                    JarEntry entry = jar.getJarEntry(resourcePath);
+                    if (entry == null) {
+                        exists = false;
+                        problems = "no such file: " + absolutePath;
+                        return;
+                    }
+                }
+                catch (Exception ex) {
+                    problems = ex.toString();
+                    if (problems == null) {
+                        problems = ex.getClass().getName();
+                    }
+                    //System.out.println(problems + " while getting file attributes for " + pathString);
+                    return;
+                }
+            }
+
             try {
-                Path path = Paths.get(pathString);
+                Path path = Paths.get(this.path);
                 absolutePath = path.toAbsolutePath().toString();
                 BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
                 exists = true;
@@ -84,6 +114,9 @@ public class FileStatCache {
                 isRegularFile = attributes.isRegularFile();
                 isLink = attributes.isSymbolicLink();
                 isOther = attributes.isOther();
+                if (isJarResource) {
+                    absolutePath = pathString;
+                }
             }
             catch (NoSuchFileException ex) {
                 exists = false;
@@ -106,7 +139,7 @@ public class FileStatCache {
             stat = new FileStat(path);
             statCache.put(path, stat);
         }
-        else if (stat.whenLastChecked < System.currentTimeMillis() - statsExpireAfter) {
+        else if (!stat.isJarResource && stat.whenLastChecked < System.currentTimeMillis() - statsExpireAfter) {
             FileStat oldStat = stat;
             stat = new FileStat(path);
             statCache.put(path, stat);
@@ -143,7 +176,8 @@ public class FileStatCache {
             throw new Exception("No read access on '" + path + "'");
         }
 
-        if ( stat.size > CONTENT_CACHE_MAX_FILE_SIZE ) {
+        // hmm ... this is a problem if its in a jar file and its large
+        if (!stat.isJarResource && stat.size > CONTENT_CACHE_MAX_FILE_SIZE ) {
             // if somehow this is in the contentCache, we should throw it out
             discardCachedContent(stat.absolutePath);
 
@@ -160,12 +194,31 @@ public class FileStatCache {
 
         byte[] content = contentCache.get(stat.absolutePath);
         if (content == null) {
-            try {
-                content = Files.readAllBytes(Paths.get(stat.absolutePath));
+            if (stat.isJarResource && stat.exists) {
+                URL url = new URL(path);
+                try(InputStream stream = url.openStream()) {
+                    stat.size = stream.available();
+                    try (ByteArrayOutputStream outStream = new ByteArrayOutputStream()) {
+                        byte buffer[] = new byte[CONTENT_CACHE_MAX_FILE_SIZE];
+                        int read;
+                        while ((read = stream.read(buffer)) != -1) {
+                            outStream.write(buffer, 0, read);
+                        }
+                        outStream.flush();
+                        content = outStream.toByteArray();
+                        outStream.close();
+                    }
+                    stream.close();
+                }
             }
-            catch (Exception ex) {
-                statCache.remove(path);
-                stat = get(path);
+            else {
+                try {
+                    content = Files.readAllBytes(Paths.get(stat.absolutePath));
+                }
+                catch (Exception ex) {
+                    statCache.remove(path);
+                    stat = get(path);
+                }
             }
             if (content == null) {
                 // refresh stats, since they are obviously wrong
@@ -174,7 +227,7 @@ public class FileStatCache {
                 // if stat.size still > 0, you have an issue
                 return;
             }
-            if (content.length != stat.size) {
+            if (!stat.isJarResource && content.length != stat.size) {
                 // refresh stats, since they are obviously wrong
                 statCache.remove(path);
                 stat = get(path);
