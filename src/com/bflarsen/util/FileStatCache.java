@@ -76,10 +76,15 @@ public class FileStatCache {
             this.path = pathString;
             whenLastChecked = System.currentTimeMillis();
             if (pathString.startsWith("jar:file:")) {
-                this.isJarResource = true;
+                isJarResource = true;
+                absolutePath = pathString;
                 String[] pieces = pathString.split("!", 2);
                 String jarPath = pieces[0].substring("jar:file:".length());
                 String resourcePath = pieces[1].substring("/".length());
+                // windows situation, doesnt like the initial / in a hard coded full path
+                if (jarPath.contains(":")) { // as in /C:/prog...
+                    jarPath = jarPath.substring("/".length());
+                }
                 try {
                     JarFile jar = new JarFile(jarPath);
                     this.path = jarPath;
