@@ -1,4 +1,4 @@
-package com.bflarsen.jsph;
+package com.bflarsen.scripting;
 
 import com.bflarsen.util.FileStatCache;
 import com.bflarsen.util.Logger;
@@ -9,26 +9,24 @@ import java.nio.file.*;
 import java.util.*;
 
 
-public class JsphTemplateEngine {
-    public final FileStatCache fileCache;
-    public final ScriptEngine jsEngine;
-    public final Invocable jsEngineAsInvocable;
-    public final Object jsphObjectInJsEngine;
+public class JsphTemplateEngine implements AutoCloseable {
+
     public String ViewFolder;
+    public final FileStatCache fileCache;
+    public final JavascriptEngine jsEngine;
+    public final Object jsphObjectInJsEngine;
 
     public final Map<String, Long> updateStampWhenLoaded = new HashMap<>();
 
-    public JsphTemplateEngine(String viewFolder) throws Exception {
+    public JsphTemplateEngine(String viewFolder, Path jsphScript) throws Exception {
         this.ViewFolder = viewFolder;
 
         this.fileCache = new FileStatCache();
 
-        this.jsEngine = new ScriptEngineManager().getEngineByName("nashorn");
-        this.jsEngineAsInvocable = (Invocable) this.jsEngine;
-
+        this.jsEngine = new JavascriptEngine();
         this.jsEngine.eval("var window = window || {};");
         this.jsEngine.eval("var console = console || { log: print };");
-        this.jsEngine.eval(JsphTemplateEngine.jsphScript);
+        this.jsEngine.evalFile(jsphScript);
         this.jsEngine.eval("var jsph = window.jsph;");
         this.jsEngine.eval("var sql = Java.type('com.bflarsen.jsph.JsphSqlEngine');");
         this.jsEngine.eval(
@@ -46,13 +44,11 @@ public class JsphTemplateEngine {
                 "    return null;\n" +
                 "}"
         );
-
-
-        this.jsphObjectInJsEngine = this.jsEngine.get("jsph");
+        this.jsphObjectInJsEngine = this.jsEngine.getValue("jsph");
     }
 
     public void addGsonStringify(Object gson) throws Exception {
-        this.jsEngine.put("GSON", gson);
+        this.jsEngine.setValue("GSON", gson);
         this.jsEngine.eval("JSON.originalStringify = JSON.stringify;");
         this.jsEngine.eval("JSON.stringify = function replacementStringify(obj) { var result = JSON.originalStringify(obj); if (result == undefined) return GSON.toJson(obj); else return result; }");
     }
@@ -82,7 +78,8 @@ public class JsphTemplateEngine {
     }
 
     public <TModel> JsphTemplate<TModel> addOrUpdateTemplate(String templateName, String templateCode) throws Exception {
-        Object renderer = this.jsEngineAsInvocable.invokeMethod(this.jsphObjectInJsEngine, "compile", templateCode);
+        Object renderer = jsEngine.runMethod("jsph", "compile", templateCode);
+        jsEngine.setProperty(this.jsphObjectInJsEngine, templateName, renderer);
         this.jsEngineAsInvocable.invokeFunction("setObjProperty", this.jsphObjectInJsEngine, templateName, renderer);
         return new JsphTemplate<TModel>(this, templateName);
     }
@@ -195,4 +192,9 @@ public class JsphTemplateEngine {
             "\twindow.jsph = jsph;\n" +
             "}());\n"
     ;
+
+    @Override
+    public void close() throws Exception {
+        jsEngine.close();
+    }
 }

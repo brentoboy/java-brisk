@@ -1,4 +1,4 @@
-package com.bflarsen.jsph;
+package com.bflarsen.scripting;
 
 import java.util.Arrays;
 import java.util.TimeZone;

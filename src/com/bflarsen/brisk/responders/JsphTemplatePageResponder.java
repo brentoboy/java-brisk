@@ -2,7 +2,7 @@ package com.bflarsen.brisk.responders;
 
 import com.bflarsen.brisk.*;
 import com.bflarsen.brisk.responses.BaseBufferedResponse;
-import com.bflarsen.jsph.JsphTemplateEngine;
+import com.bflarsen.scripting.JsphTemplateEngine;
 import com.bflarsen.util.FileStatCache;
 import com.bflarsen.util.Logger;
 

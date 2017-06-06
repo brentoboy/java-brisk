@@ -1,5 +1,7 @@
-package com.bflarsen.jsph;
+package com.bflarsen.scripting;
 
+
+import com.bflarsen.scripting.JsphTemplateEngine;
 
 public class JsphTemplate<TModel> {
 
