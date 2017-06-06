@@ -55,7 +55,7 @@ public class JsphTemplateEngine implements AutoCloseable {
 
     public <TModel> JsphTemplate<TModel> addTemplateOrUpdateIfModified(String templateFile) throws Exception {
         String templateName = templateFile;
-        String path = Paths.get(this.ViewFolder, templateFile).toString();
+        String path = getFullPath(templateFile);
         Long updateStamp = updateStampWhenLoaded.get(path);
         if (updateStamp == null || updateStamp < fileCache.get(path).whenModified) {
             if (updateStamp != null) {
@@ -69,12 +69,21 @@ public class JsphTemplateEngine implements AutoCloseable {
     }
 
     public <TModel> JsphTemplate<TModel> addTemplate(String templateFile) throws Exception {
-        String path = Paths.get(this.ViewFolder, templateFile).toString();
+        String path = getFullPath(templateFile);
         Long updateStamp = updateStampWhenLoaded.get(path);
         if (updateStamp == null) {
             return addTemplateOrUpdateIfModified(templateFile);
         }
         return null;
+    }
+
+    public String getFullPath(String templateFile) {
+        if (this.ViewFolder.endsWith("/") || templateFile.startsWith("/")) {
+            return this.ViewFolder + templateFile;
+        }
+        else {
+            return this.ViewFolder + "/" + templateFile;
+        }
     }
 
     public <TModel> JsphTemplate<TModel> addOrUpdateTemplate(String templateName, String templateCode) throws Exception {
