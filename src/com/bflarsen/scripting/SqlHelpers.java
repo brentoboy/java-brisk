@@ -4,8 +4,7 @@ import java.util.Arrays;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
-
-public class JsphSqlEngine {
+public class SqlHelpers {
     static public String escape(Object value) {
         if (value == null) {
             return "NULL";

@@ -4,7 +4,10 @@ package com.bflarsen.scripting;
 import jdk.nashorn.api.scripting.JSObject;
 
 import javax.script.*;
+import java.io.File;
 import java.io.FileReader;
+import java.io.InputStream;
+import java.io.Reader;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedTransferQueue;
@@ -51,11 +54,43 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
     private final Task stopTask;
     private boolean isRunning;
 
-    public JavascriptEngine() {
+    public JavascriptEngine() throws Exception {
+        this(null);
+    }
+    public JavascriptEngine(Object gson) throws Exception {
         stopTask = new Task(null);
         taskQueue = new LinkedTransferQueue<>();
         engineThread = new Thread(this);
         engineThread.start();
+        eval( // nashorn-polyfill
+                "var global = global || this;\n" +
+                "var window = window || global;\n" +
+                "var process = process || {env:{}};\n" +
+                "var console = console || { debug: print, log: print, warn: print, error: print };\n" +
+                "function isNull(value) {\n" +
+                "    return value === null || value === undefined;\n" +
+                "}\n" +
+                "function coalesce() {\n" +
+                "    var len = arguments.length;\n" +
+                "    for (var i=0; i<len; i++) {\n" +
+                "        if (!isNull(arguments[i])) {\n" +
+                "            return arguments[i];\n" +
+                "        }\n" +
+                "    }\n" +
+                "    return null;\n" +
+                "}"
+        );
+        if (gson != null) {
+            this.setValue("GSON", gson);
+            this.eval(
+                    "JSON.originalStringify = JSON.stringify;" +
+                            "JSON.stringify = function replacementStringify(obj) {" +
+                            "  var result = JSON.originalStringify(obj);" +
+                            "  if (result == undefined) return GSON.toJson(obj);" +
+                            "  else return result;" +
+                            "}"
+            );
+        }
     }
 
     @Override
@@ -92,9 +127,23 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
     }
 
     public Object eval(final String jsCode) throws Exception {
-        Task task = new Task(() -> engine.eval(jsCode));
+        Task task = new Task(
+                () -> {
+                    return engine.eval(jsCode);
+                }
+        );
         taskQueue.add(task);
         return task.waitForResult();
+    }
+
+    public void compile(final String jsCode) throws Exception {
+        Task task = new Task(
+                () -> {
+                    return ((Compilable) engine).compile(jsCode);
+                }
+        );
+        taskQueue.add(task);
+        task.waitForResult();
     }
 
     public void setValue(String jsVariableName, Object value) throws Exception {
@@ -158,12 +207,10 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
         return task.waitForResult();
     }
 
-    public Object evalFile(final Path path) throws Exception {
+    public Object eval(final Reader reader) throws Exception {
         Task task = new Task(
                 () -> {
-                    try(FileReader reader = new FileReader(path.toFile())) {
-                        return engine.eval(reader);
-                    }
+                    return engine.eval(reader);
                 }
         );
         taskQueue.add(task);

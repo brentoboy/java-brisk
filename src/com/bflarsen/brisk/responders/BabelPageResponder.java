@@ -3,13 +3,17 @@ package com.bflarsen.brisk.responders;
 
 import com.bflarsen.brisk.*;
 import com.bflarsen.brisk.responses.*;
+import com.bflarsen.scripting.BabelTranspiler;
 import com.bflarsen.util.*;
 
 import java.io.File;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BabelPageResponder extends BaseResponder{
+    public static BabelTranspiler transpiler = null;
+    public static Map<String, String> transpiledScripts = new ConcurrentHashMap<>();
 
     protected String appFolder;
     protected List<String> components;
@@ -172,18 +176,61 @@ public class BabelPageResponder extends BaseResponder{
 
     private void appendJs(StringBuilder builder, FileStatCache cache, String viewFolder, String relative_path) throws Exception {
         // String widget_identifier = relative_path.replace("/", "__").replace("\\", "__").replace(":", "_").replace(".", "_");
+        String resourcePath = viewFolder + "/" + relative_path;
+        // re-compile modified scripts
+        if (!cache.isCached(resourcePath) && transpiledScripts.containsKey(resourcePath)) {
+            System.out.println("dumped: " + resourcePath);
+            transpiledScripts.remove(resourcePath);
+        }
+        String scriptCode = null;
+        if (transpiler != null) {
+            if (!transpiledScripts.containsKey(resourcePath)) {
+                try {
+                    transpiledScripts.put(resourcePath, transpiler.transform(cache.readString(resourcePath)));
+                }
+                catch (Exception ex) {
+                    transpiledScripts.put(resourcePath, ex.getMessage());
+                }
+            }
+            scriptCode = transpiledScripts.get(resourcePath);
+        }
+        else {
+            scriptCode = cache.readString(resourcePath);
+        }
         builder.append("<!-- ./").append(relative_path).append(" -->\r\n");
         if (cache.get(viewFolder + "/" + relative_path).isReadable) {
-            builder.append("<script type=\"text/babel\">\r\n")
-                    .append(cache.readString(viewFolder + "/" + relative_path))
-                    .append("\r\n</script>\r\n");
+            builder.append("<script type=").append(getScriptType()).append(">\r\n")
+                    .append(scriptCode)
+                    .append("\r\n</script>\r\n")
+            ;
         }
     }
 
     private void appendRawJs(StringBuilder builder, String rawJs) {
-        builder.append("<script type=\"text/babel\">\r\n")
+        if (transpiler != null) {
+            if (! transpiledScripts.containsKey(rawJs)) {
+                try {
+                    transpiledScripts.put(rawJs, transpiler.transform(rawJs));
+                }
+                catch (Exception ex) {
+                    transpiledScripts.put(rawJs, ex.getMessage());
+                }
+            }
+            rawJs = transpiledScripts.get(rawJs);
+        }
+        builder.append("<script type=").append(getScriptType()).append(">\r\n")
                 .append(rawJs)
                 .append("\r\n</script>\r\n")
-                .append("\r\n\r\n");
+                .append("\r\n\r\n")
+        ;
+    }
+
+    private String getScriptType() {
+        if (transpiler == null) { // use in browser babel.js to transpile
+            return "\"text/babel\"";
+        }
+        else { // use cached server side transpiling, browser should treat it as plain old javascript
+            return "\"text/javascript\"";
+        }
     }
 }

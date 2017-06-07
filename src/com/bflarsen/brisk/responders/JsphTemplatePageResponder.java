@@ -85,7 +85,7 @@ public class JsphTemplatePageResponder extends BaseResponder {
 
         // rebuild the appFolder with all the templates inserted
         builder.append(head_html);
-        builder.append("<script>\n" + JsphTemplateEngine.jsphScript + "</script>");
+       // builder.append("<script>\n" + JsphTemplateEngine.jsphScript + "</script>");
 
 
         // add any widget specific css

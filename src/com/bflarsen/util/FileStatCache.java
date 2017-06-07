@@ -51,7 +51,7 @@ public class FileStatCache {
     public long statsExpireAfter = 60000L; // one minute
 
     public long CONTENT_CACHE_MAX_SIZE = 16*MB;
-    public int CONTENT_CACHE_MAX_FILE_SIZE = 24*KB;
+    public int CONTENT_CACHE_MAX_FILE_SIZE = 64*KB;
     public final Map<String, byte[]> contentCache = new ConcurrentHashMap<>();
     public long contentCacheTotalBytes = 0l;
 
@@ -161,6 +161,10 @@ public class FileStatCache {
             contentCache.remove(absolutePath);
             contentCacheTotalBytes -= cachedContent.length;
         }
+    }
+
+    public boolean isCached(String path) {
+        return contentCache.containsKey(get(path).absolutePath);
     }
 
     public String readString(String path) throws Exception {

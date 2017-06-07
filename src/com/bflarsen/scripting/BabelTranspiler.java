@@ -1,15 +1,21 @@
 package com.bflarsen.scripting;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 
-import java.nio.file.Path;
 
 public class BabelTranspiler implements AutoCloseable {
 
     JavascriptEngine jsEngine;
 
-    public BabelTranspiler(Path babelJsFile) throws Exception {
+    public BabelTranspiler() throws Exception {
         jsEngine = new JavascriptEngine();
-        jsEngine.evalFile(babelJsFile);
+        try(InputStream resource = getClass().getClassLoader().getResourceAsStream("com/bflarsen/scripting/babel.js")) {
+            try (Reader reader = new InputStreamReader(resource)) {
+                jsEngine.eval(reader);
+            }
+        }
     }
 
     public String transform(String inputCode) throws Exception {
