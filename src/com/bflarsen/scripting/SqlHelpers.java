@@ -1,6 +1,8 @@
 package com.bflarsen.scripting;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
@@ -17,6 +19,9 @@ public class SqlHelpers {
         }
         if (jdk.nashorn.api.scripting.ScriptObjectMirror.class.isAssignableFrom(value.getClass())) {
             value = jdk.nashorn.api.scripting.ScriptUtils.convert(value, Object[].class);
+        }
+        if (List.class.isAssignableFrom(value.getClass())) {
+            value = ((List)value).toArray();
         }
         if (value.getClass().isArray()) {
             String csv = Arrays.stream((Object[])value)
