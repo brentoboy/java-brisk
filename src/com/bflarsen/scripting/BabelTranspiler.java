@@ -11,11 +11,7 @@ public class BabelTranspiler implements AutoCloseable {
 
     public BabelTranspiler() throws Exception {
         jsEngine = new JavascriptEngine();
-        try(InputStream resource = getClass().getClassLoader().getResourceAsStream("com/bflarsen/scripting/babel.js")) {
-            try (Reader reader = new InputStreamReader(resource)) {
-                jsEngine.eval(reader);
-            }
-        }
+        jsEngine.evalResourceAsync("com/bflarsen/scripting/babel.js");
     }
 
     public String transform(String inputCode) throws Exception {

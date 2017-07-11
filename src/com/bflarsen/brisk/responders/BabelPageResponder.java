@@ -17,13 +17,15 @@ public class BabelPageResponder extends BaseResponder{
 
     protected String appFolder;
     protected List<String> components;
-    protected List<String> rawScripts;
+    protected List<String> rawJs;
+    protected List<String> rawJsx;
 
     public BabelPageResponder(String appFolder) {
         try {
             this.appFolder = appFolder;
             this.components = new ArrayList<>();
-            this.rawScripts = new ArrayList<>();
+            this.rawJs = new ArrayList<>();
+            this.rawJsx = new ArrayList<>();
             this.addComponent(this.appFolder);
         } catch (Exception ex) {
             Logger.logEx(ex, "BabelPageResponder", "constructor", "");
@@ -57,8 +59,12 @@ public class BabelPageResponder extends BaseResponder{
         }
     }
 
-    public void addScript(String js_code) {
-        this.rawScripts.add(js_code);
+    public void addJs(String js_code) {
+        this.rawJs.add(js_code);
+    }
+
+    public void addJsx(String jsx_code) {
+        this.rawJsx.add(jsx_code);
     }
 
     @Override
@@ -137,7 +143,12 @@ public class BabelPageResponder extends BaseResponder{
                 ;
                 if (files != null) {
                     for (File file : files) {
-                        appendJs(builder, cache, viewFolder, component + "/" + file.getName());
+                        if (file.getName().endsWith(".jsx")) {
+                            appendJsx(builder, cache, viewFolder, component + "/" + file.getName());
+                        }
+                        else {
+                            appendJs(builder, cache, viewFolder, component + "/" + file.getName());
+                        }
                     }
                 }
             }
@@ -146,13 +157,16 @@ public class BabelPageResponder extends BaseResponder{
                     appendJs(builder, cache, viewFolder, component + ".js");
                 }
                 if (cache.get(component_path + ".jsx").isReadable) {
-                    appendJs(builder, cache, viewFolder, component + ".jsx");
+                    appendJsx(builder, cache, viewFolder, component + ".jsx");
                 }
             }
             builder.append("\r\n\r\n");
         }
 
-        for (String script : this.rawScripts) {
+        for (String script : this.rawJsx) {
+            appendRawJsx(builder, script);
+        }
+        for (String script : this.rawJs) {
             appendRawJs(builder, script);
         }
 
@@ -178,6 +192,20 @@ public class BabelPageResponder extends BaseResponder{
         // String widget_identifier = relative_path.replace("/", "__").replace("\\", "__").replace(":", "_").replace(".", "_");
         String resourcePath = viewFolder + "/" + relative_path;
         // re-compile modified scripts
+        String scriptCode = cache.readString(resourcePath);
+        builder.append("<!-- ./").append(relative_path).append(" -->\r\n");
+        if (cache.get(viewFolder + "/" + relative_path).isReadable) {
+            builder.append("<script type=\"text/javascript\">\r\n")
+                    .append(scriptCode)
+                    .append("\r\n</script>\r\n")
+            ;
+        }
+    }
+
+    private void appendJsx(StringBuilder builder, FileStatCache cache, String viewFolder, String relative_path) throws Exception {
+        // String widget_identifier = relative_path.replace("/", "__").replace("\\", "__").replace(":", "_").replace(".", "_");
+        String resourcePath = viewFolder + "/" + relative_path;
+        // re-compile modified scripts
         if (!cache.isCached(resourcePath) && transpiledScripts.containsKey(resourcePath)) {
             System.out.println("dumped: " + resourcePath);
             transpiledScripts.remove(resourcePath);
@@ -186,7 +214,18 @@ public class BabelPageResponder extends BaseResponder{
         if (transpiler != null) {
             if (!transpiledScripts.containsKey(resourcePath)) {
                 try {
-                    transpiledScripts.put(resourcePath, transpiler.transform(cache.readString(resourcePath)));
+                    String es5 = null;
+                    if (cache.get(resourcePath+".es5").isReadable
+                        && cache.get(resourcePath+".es5").whenModified > cache.get(resourcePath).whenModified
+                    ) {
+                        cache.readString(resourcePath); // it has to be cached so if its modified we notice it
+                        es5 = cache.readString(resourcePath+".es5");
+                    }
+                    else {
+                        System.out.println("transpiling: " + resourcePath);
+                        es5 = transpiler.transform(cache.readString(resourcePath));
+                    }
+                    transpiledScripts.put(resourcePath, es5);
                 }
                 catch (Exception ex) {
                     transpiledScripts.put(resourcePath, ex.getMessage());
@@ -207,19 +246,27 @@ public class BabelPageResponder extends BaseResponder{
     }
 
     private void appendRawJs(StringBuilder builder, String rawJs) {
+        builder.append("<script type=\"text/javascript\">\r\n")
+                .append(rawJs)
+                .append("\r\n</script>\r\n")
+                .append("\r\n\r\n")
+        ;
+    }
+
+    private void appendRawJsx(StringBuilder builder, String rawJsx) {
         if (transpiler != null) {
-            if (! transpiledScripts.containsKey(rawJs)) {
+            if (! transpiledScripts.containsKey(rawJsx)) {
                 try {
-                    transpiledScripts.put(rawJs, transpiler.transform(rawJs));
+                    transpiledScripts.put(rawJsx, transpiler.transform(rawJsx));
                 }
                 catch (Exception ex) {
-                    transpiledScripts.put(rawJs, ex.getMessage());
+                    transpiledScripts.put(rawJsx, ex.getMessage());
                 }
             }
-            rawJs = transpiledScripts.get(rawJs);
+            rawJsx = transpiledScripts.get(rawJsx);
         }
         builder.append("<script type=").append(getScriptType()).append(">\r\n")
-                .append(rawJs)
+                .append(rawJsx)
                 .append("\r\n</script>\r\n")
                 .append("\r\n\r\n")
         ;

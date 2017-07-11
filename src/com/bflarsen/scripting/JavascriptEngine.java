@@ -4,11 +4,9 @@ package com.bflarsen.scripting;
 import jdk.nashorn.api.scripting.JSObject;
 
 import javax.script.*;
-import java.io.File;
-import java.io.FileReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedTransferQueue;
 
@@ -84,11 +82,11 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
             this.setValue("GSON", gson);
             this.eval(
                     "JSON.originalStringify = JSON.stringify;" +
-                            "JSON.stringify = function replacementStringify(obj) {" +
-                            "  var result = JSON.originalStringify(obj);" +
-                            "  if (result == undefined) return GSON.toJson(obj);" +
-                            "  else return result;" +
-                            "}"
+                    "JSON.stringify = function replacementStringify(obj) {" +
+                    "  var result = JSON.originalStringify(obj);" +
+                    "  if (result == undefined) return GSON.toJson(obj);" +
+                    "  else return result;" +
+                    "}"
             );
         }
     }
@@ -117,10 +115,17 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
                     isRunning = false;
                     break;
                 }
-                task.runFunction();
+                try {
+                    task.runFunction();
+                }
+                catch(Exception ex) {
+                    task.exception = ex;
+                    System.out.println(ex);
+                }
             }
             catch (Exception ex) {
                 // hmm
+                System.out.println(ex);
             }
         }
         isRunning = false;
@@ -134,6 +139,30 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
         );
         taskQueue.add(task);
         return task.waitForResult();
+    }
+
+
+    public Object eval(final Reader reader) throws Exception {
+        Task task = new Task(
+                () -> {
+                    return engine.eval(reader);
+                }
+        );
+        taskQueue.add(task);
+        return task.waitForResult();
+    }
+
+    public void evalResourceAsync(final String resourcePath) throws Exception {
+        Task task = new Task(
+                () -> {
+                    try (InputStream resource = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+                        try (Reader reader = new InputStreamReader(resource)) {
+                            return engine.eval(reader);
+                        }
+                    }
+                }
+        );
+        taskQueue.add(task);
     }
 
     public void compile(final String jsCode) throws Exception {
@@ -201,16 +230,6 @@ public class JavascriptEngine implements Runnable, AutoCloseable {
         Task task = new Task(
                 () -> {
                     return ((Invocable) engine).invokeFunction(fnName, params);
-                }
-        );
-        taskQueue.add(task);
-        return task.waitForResult();
-    }
-
-    public Object eval(final Reader reader) throws Exception {
-        Task task = new Task(
-                () -> {
-                    return engine.eval(reader);
                 }
         );
         taskQueue.add(task);
