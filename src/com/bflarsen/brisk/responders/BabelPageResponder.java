@@ -216,7 +216,7 @@ public class BabelPageResponder extends BaseResponder{
                 try {
                     String es5 = null;
                     if (cache.get(resourcePath+".es5").isReadable
-                        && cache.get(resourcePath+".es5").whenModified > cache.get(resourcePath).whenModified
+                        && cache.get(resourcePath+".es5").whenModified > cache.get(resourcePath).whenModified - 5 // if both are deployed at the same time, the timestamps might be a little off, so close is close enough
                     ) {
                         cache.readString(resourcePath); // it has to be cached so if its modified we notice it
                         es5 = cache.readString(resourcePath+".es5");
