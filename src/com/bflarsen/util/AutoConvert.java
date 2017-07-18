@@ -86,7 +86,7 @@ public class AutoConvert  {
             return null;
         }
         try {
-            return Long.parseLong((String) value);
+            return Long.parseLong(value.toString().trim());
         }
         catch (Exception ex) {
             throw new ValueNotConvertableException(Long.class, value, "in 'AutoConvert.String_To_Long'", ex.toString());
@@ -107,7 +107,7 @@ public class AutoConvert  {
             return null;
         }
         try {
-            return Integer.parseInt((String)value);
+            return Integer.parseInt(value.toString().trim());
         }
         catch (Exception ex) {
             throw new ValueNotConvertableException(Integer.class, value, "in 'AutoConvert.String_To_Integer'", ex.toString());
@@ -136,7 +136,7 @@ public class AutoConvert  {
         if ("".equals(value) || "null".equals(value) || "undefined".equals(value)) {
             return null;
         }
-        switch ((String)value) {
+        switch (value.toString().trim()) {
             case "true":
             case "TRUE":
             case "True":
