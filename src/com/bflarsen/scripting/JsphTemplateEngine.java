@@ -32,6 +32,9 @@ public class JsphTemplateEngine extends JavascriptEngine {
     public <TModel> JsphTemplate<TModel> addTemplateOrUpdateIfModified(String templateFile) throws Exception {
         String templateName = templateFile;
         String path = getFullPath(templateFile);
+        if (!fileCache.get(path).exists) {
+            Logger.logWarning("File not found: " + path, "JsphTemplateEngine", "addTemplateOrUpdateIfModified", "loading content");
+        }
         Long updateStamp = updateStampWhenLoaded.get(path);
         if (updateStamp == null || updateStamp < fileCache.get(path).whenModified) {
             if (updateStamp != null) {
