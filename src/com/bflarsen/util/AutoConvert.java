@@ -34,10 +34,11 @@ public class AutoConvert  {
         if (values == null || values.isEmpty()) {
             return;
         }
+        String fieldName = "";
         try {
             Class cls = target.getClass();
             for (Field field : cls.getFields()) {
-                String fieldName = field.getName();
+                fieldName = field.getName();
                 if (values.containsKey(fieldName)) {
                     Object value = values.get(fieldName);
                     field.set(target, convert(value, field.getType()));
@@ -45,7 +46,7 @@ public class AutoConvert  {
             }
         }
         catch (Exception ex) {
-            logEx(ex, this.getClass().getName(), "fill()", "");
+            logEx(ex, this.getClass().getName(), "fill()", fieldName);
         }
     }
 
