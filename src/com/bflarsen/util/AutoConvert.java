@@ -41,7 +41,11 @@ public class AutoConvert  {
                 fieldName = field.getName();
                 if (values.containsKey(fieldName)) {
                     Object value = values.get(fieldName);
-                    field.set(target, convert(value, field.getType()));
+                    Object convertedValue = convert(value, field.getType());
+                    if (convertedValue == null && value != null && !"".equals(value.toString()) ) {
+                        logWarning("value not converted", this.getClass().getName(), "fill()", String.format("field: %s, value: %s", fieldName, value.toString()));
+                    }
+                    field.set(target, convertedValue);
                 }
             }
         }
