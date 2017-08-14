@@ -1,9 +1,10 @@
 package com.bflarsen.brisk;
 
-import java.io.IOException;
+import java.io.FileInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Paths;
+import java.security.KeyStore;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +15,7 @@ import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
 import com.bflarsen.util.AutoConvert;
 import com.bflarsen.util.FileStatCache;
+import javax.net.ssl.*;
 
 import static com.bflarsen.util.Logger.*;
 
@@ -59,6 +61,12 @@ public class HttpServer extends Thread {
     public final AutoConvert AutoConverter = new AutoConvert();
 
     public String ViewFolder = null;
+    public String SslKeyStorePath = null;
+    public String SslKeyStorePassphrase = null;
+
+    public void runAsync() {
+        start();
+    }
 
     @Override
     public void run() {
@@ -69,7 +77,7 @@ public class HttpServer extends Thread {
         this.ResponseSender.run();
         this.ContextCleanup.run();
 
-        try (ServerSocket serverSocket = new ServerSocket(this.Port)) {
+        try (ServerSocket serverSocket = createServerSocket()) {
             logInfo("Listening on Port " + this.Port, CLASS_NAME, "run()", "Initializing");
 
             while (!this.isClosing) {
@@ -82,11 +90,35 @@ public class HttpServer extends Thread {
                 }
             }
         }
-        catch(IOException ex){
+        catch(Exception ex){
             logEx(ex, CLASS_NAME, "run", "Attempting to listen() on port " + this.Port);
         }
 
         logInfo("No longer listening on Port " + this.Port, CLASS_NAME, "run()", "Cleaning Up");
+    }
+
+    private ServerSocket createServerSocket() throws Exception {
+        if (SslKeyStorePath != null) {
+            KeyStore keystore = KeyStore.getInstance("JKS");
+            keystore.load(new FileInputStream(SslKeyStorePath), SslKeyStorePassphrase.toCharArray());
+
+            KeyManagerFactory kmFactory = KeyManagerFactory.getInstance("SunX509");
+            kmFactory.init(keystore, SslKeyStorePassphrase.toCharArray());
+
+            TrustManagerFactory tmFactory = TrustManagerFactory.getInstance("SunX509");
+            tmFactory.init(keystore);
+
+            SSLContext sc = SSLContext.getInstance("TLSv1");
+            sc.init(kmFactory.getKeyManagers(), tmFactory.getTrustManagers(), null);
+
+            SSLServerSocketFactory sslSocketFactory = sc.getServerSocketFactory();
+            SSLServerSocket socket = (SSLServerSocket) sslSocketFactory.createServerSocket(this.Port);
+
+            return socket;
+        }
+        else {
+            return new ServerSocket(this.Port);
+        }
     }
 
     public void initiateShutdown() {
