@@ -25,7 +25,10 @@ public abstract class BaseResponse implements HttpResponse {
         this.StatusCode = statusCode;
         this.setHeader("Date", UtcFormatter.format(new Date()));
         this.setHeader("Server", "Brisk/0.1.0");
-        this.setHeader("Content-Type", contentType); // I'd sure like to include "; charset=UTF-8" on the end of this
+        if (contentType != null && contentType.contains("text") && !contentType.contains("charset")) {
+            contentType = contentType + "; charset=UTF-8";
+        }
+        this.setHeader("Content-Type", contentType);
         this.setHeader("Cache-Control", "max-age=0");
     }
 

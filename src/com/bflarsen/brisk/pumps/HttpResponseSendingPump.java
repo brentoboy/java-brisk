@@ -1,12 +1,17 @@
 package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.*;
+import com.bflarsen.brisk.responses.BaseBufferedResponse;
+
 import static com.bflarsen.util.Logger.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.SocketException;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
+
 
 public class HttpResponseSendingPump implements Runnable {
 
@@ -41,60 +46,88 @@ public class HttpResponseSendingPump implements Runnable {
         if (context.RequestStream == null)
             throw new Exception("Empty ResponseStream object in sendResponse.");
 
-        HttpResponse response = context.Response;
-        OutputStream stream = context.ResponseStream;
-        PrintWriter streamWriter = new java.io.PrintWriter(stream, true);
+        try {
+            HttpResponse response = context.Response;
+            OutputStream stream = context.ResponseStream;
+            PrintWriter streamWriter = new java.io.PrintWriter(stream, true);
 
-        Long length = response.getContentLength();
-        if (length != null) {
-            response.setHeader("Content-Length", length.toString());
-        }
+            Long length = response.getContentLength();
+            byte[] gzipped = null;
+            if (length != null
+                    && context.Request.Headers.containsKey("Request_AcceptEncoding")
+                    && context.Request.Headers.get("Request_AcceptEncoding").contains("gzip")
+            ) {
+                ByteArrayOutputStream byteStream = new ByteArrayOutputStream(length.intValue());
+                GZIPOutputStream zipStream = new GZIPOutputStream(byteStream);
+                response.sendBody(zipStream);
+                zipStream.flush();
+                byteStream.flush();
+                zipStream.close();
+                byteStream.close();
+                gzipped = byteStream.toByteArray();
+                length = (long)gzipped.length;
+                response.setHeader("Content-Encoding", "gzip");
+            }
+            if (length != null) {
+                response.setHeader("Content-Length", length.toString());
+            }
 
-        // send the first line ... something like this :  "HTTP/1.1 200 OK"
-        streamWriter.println(String.format(
-                "%s %d %s"
-                , response.getHttpVersion()
-                , response.getStatusCode()
-                , response.getStatusDescription()
-        ));
-
-        // send all the header lines ... something like this: "Header-Name: header-value"
-        for (Map.Entry<String, String> header : response.getHeaders().entrySet()) {
+            // send the first line ... something like this :  "HTTP/1.1 200 OK"
             streamWriter.println(String.format(
-                    "%s: %s"
-                    , header.getKey()
-                    , header.getValue()
+                    "%s %d %s"
+                    , response.getHttpVersion()
+                    , response.getStatusCode()
+                    , response.getStatusDescription()
             ));
-        }
 
-        // send the cookies
-        for (HttpCookie cookie : context.SendCookies) {
-            streamWriter.println(cookie.getResponseLine());
-        }
+            // send all the header lines ... something like this: "Header-Name: header-value"
+            for (Map.Entry<String, String> header : response.getHeaders().entrySet()) {
+                streamWriter.println(String.format(
+                        "%s: %s"
+                        , header.getKey()
+                        , header.getValue()
+                ));
+            }
 
-        // send a blank line signifying "</end headers>"
-        streamWriter.println("");
-        streamWriter.flush();
+            // send the cookies
+            for (HttpCookie cookie : context.SendCookies) {
+                streamWriter.println(cookie.getResponseLine());
+            }
 
-        // record the time to first byte
-        context.Stats.SendBodyStarted = System.nanoTime();
+            // send a blank line signifying "</end headers>"
+            streamWriter.println("");
+            streamWriter.flush();
 
-        // send body
-        try {
-            response.sendBody(stream);
-        }
-        catch (Exception ex) {
-            logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
-        }
+            // record the time to first byte
+            context.Stats.SendBodyStarted = System.nanoTime();
 
-        try {
-            stream.flush();
-        }
-        catch (Exception ex) {
-            logEx(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
-        }
+            // send body
+            try {
+                if (gzipped != null) {
+                    stream.write(gzipped);
+                }
+                else {
+                    response.sendBody(stream);
+                }
+            }
+            catch (Exception ex) {
+                logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
+            }
 
-        context.Stats.SendBodyEnded = System.nanoTime();
+            try {
+                stream.flush();
+            }
+            catch (Exception ex) {
+                logEx(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
+            }
+            System.out.println("done");
+        }
+        catch (java.net.SocketException ex) {
+            // so you had a socket error ... so what
+        }
+        finally {
+            context.Stats.SendBodyEnded = System.nanoTime();
+        }
     }
 
     private static class Worker extends Thread {
