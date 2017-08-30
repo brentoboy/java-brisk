@@ -53,7 +53,7 @@ public class HttpResponseSendingPump implements Runnable {
 
             Long length = response.getContentLength();
             byte[] gzipped = null;
-            if (length != null
+            if (length != null && length > 16*1024
                     && context.Request.Headers.containsKey("Request_AcceptEncoding")
                     && context.Request.Headers.get("Request_AcceptEncoding").contains("gzip")
             ) {
