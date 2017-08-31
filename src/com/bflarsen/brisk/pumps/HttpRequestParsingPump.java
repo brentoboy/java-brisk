@@ -70,9 +70,13 @@ public class HttpRequestParsingPump implements Runnable {
             throw new Exception("Empty RequestStream object in parseRequest.");
 
         if (context.Socket != null && context.Socket.getRemoteSocketAddress() instanceof InetSocketAddress) {
-            InetSocketAddress socketAddress = (InetSocketAddress) context.Socket.getRemoteSocketAddress();
-            context.Request.RemoteIp = socketAddress.getAddress().toString().replace("/", "");
-            context.Request.Headers.put("Request_RemoteIp", context.Request.RemoteIp);
+            try {
+                InetSocketAddress socketAddress = (InetSocketAddress) context.Socket.getRemoteSocketAddress();
+                context.Request.RemoteIp = socketAddress.getAddress().toString().replace("/", "");
+                context.Request.Headers.put("Request_RemoteIp", context.Request.RemoteIp);
+            } catch(Exception ex) {
+                // not worth complaining about
+            }
         }
 
         String line = tryReadLine(context.RequestStream);
@@ -131,7 +135,7 @@ public class HttpRequestParsingPump implements Runnable {
 
         // read in the headers line by line
         line = tryReadLine(context.RequestStream);
-        while (!line.equals("")) {
+        while (line != null && !line.equals("")) {
             int pos = line.indexOf(':');
             if (pos != -1)
             {
