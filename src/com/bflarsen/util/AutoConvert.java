@@ -87,7 +87,7 @@ public class AutoConvert  {
     }
 
     public static Object String_To_Long(Object value) throws Exception {
-        if ("".equals(value) || "null".equals(value) || "undefined".equals(value)) {
+        if ("".equals(value) || "null".equals(value) || "undefined".equals(value) || "NaN".equals(value)) {
             return null;
         }
         try {
@@ -108,7 +108,7 @@ public class AutoConvert  {
     }
 
     public static Object String_To_Integer(Object value) throws Exception {
-        if ("".equals(value) || "null".equals(value) || "undefined".equals(value)) {
+        if ("".equals(value) || "null".equals(value) || "undefined".equals(value) || "NaN".equals(value)) {
             return null;
         }
         try {
@@ -138,7 +138,7 @@ public class AutoConvert  {
     }
 
     public static Object String_To_Boolean(Object value) throws Exception {
-        if ("".equals(value) || "null".equals(value) || "undefined".equals(value)) {
+        if ("".equals(value) || "null".equals(value) || "undefined".equals(value) || "NaN".equals(value)) {
             return null;
         }
         switch (value.toString().trim()) {
