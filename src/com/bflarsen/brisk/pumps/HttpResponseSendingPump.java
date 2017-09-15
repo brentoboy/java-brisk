@@ -110,6 +110,11 @@ public class HttpResponseSendingPump implements Runnable {
                     response.sendBody(stream);
                 }
             }
+            catch (SocketException ex) {
+                if (! ex.getMessage().contains("Broken pipe")) {
+                    logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
+                }
+            }
             catch (Exception ex) {
                 logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
             }
