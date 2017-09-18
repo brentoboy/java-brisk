@@ -172,10 +172,10 @@ public class HttpRequestParsingPump implements Runnable {
 
         // attach a session
         if (context.Server.CreateSessions) {
-            String sessionID = context.Request.Cookies.get(context.Server.SessionCookieName);
-            if (sessionID == null && context.Request.Params.containsKey(context.Server.SessionCookieName)) {
-                sessionID = context.Request.Params.get(context.Server.SessionCookieName).toString();
-            }
+            String sessionID = (context.Request.Params.containsKey(context.Server.SessionCookieName))
+                    ? context.Request.Params.get(context.Server.SessionCookieName).toString()
+                    : context.Request.Cookies.get(context.Server.SessionCookieName)
+            ;
             if (sessionID != null) {
                 context.Session = context.Server.Sessions.get(sessionID);
                 if (context.Session != null && context.Session.Expires < System.currentTimeMillis()) {
