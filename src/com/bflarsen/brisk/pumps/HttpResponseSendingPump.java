@@ -111,7 +111,10 @@ public class HttpResponseSendingPump implements Runnable {
                 }
             }
             catch (SocketException ex) {
-                if (! ex.getMessage().contains("Broken pipe")) {
+                if (! ex.getMessage().contains("Broken pipe")
+                    && ! ex.getMessage().contains("Connection reset")
+                    && ! ex.getMessage().contains("Connection closed by remote host")
+                ) {
                     logEx(ex, "HttpResponseSendingPump", "sendResponse", "response.sendBody()");
                 }
             }
