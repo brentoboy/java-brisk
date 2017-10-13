@@ -10,7 +10,7 @@ public class HttpCookie {
 
     public String Name; // directs browsers to send a cookie header for page requests, passing the server "Name: Value"
     public String Value;
-    public String Path; // directs browsers to only send this cookie if they are requesting a page "under" this path... like "/admin"
+    public String Path = "/"; // directs browsers to only send this cookie if they are requesting a page "under" this path... like "/admin"
     public String Domain; // directs browsers to send this cookie to "*.Domain", set it to ".my.com" to send to any subdomain of  "my.com"
     public Long Expires; // if set, it will expire at this time
     public boolean Secure; // attribute is meant to keep cookie communication limited to encrypted transmission, directing browsers to use cookies only via secure/encrypted connections
