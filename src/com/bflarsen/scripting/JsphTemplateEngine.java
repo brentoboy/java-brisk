@@ -29,7 +29,7 @@ public class JsphTemplateEngine extends JavascriptEngine {
         this.eval("var sql = Java.type('com.bflarsen.scripting.SqlHelpers');");
     }
 
-    public <TModel> JsphTemplate<TModel> addTemplateOrUpdateIfModified(String templateFile) throws Exception {
+    synchronized public <TModel> JsphTemplate<TModel> addTemplateOrUpdateIfModified(String templateFile) throws Exception {
         String templateName = templateFile;
         String path = getFullPath(templateFile);
         if (!fileCache.get(path).exists) {
