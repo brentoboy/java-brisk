@@ -33,6 +33,26 @@ public class HttpRequestRoutingPump implements Runnable {
     }
 
     public static void chooseRoute(HttpContext context) {
+        String RequestedUpgrade = context.Request.getHeader("Request_Upgrade");
+        if (RequestedUpgrade != null) {
+            try {
+                switch (RequestedUpgrade) {
+                    case "websocket": {
+                        context.Responder = context.Server.WebSocketUpgradeResponderFactory.create();
+                        return;
+                    }
+                    default: { // fail due to unrecognized upgrade request
+                        logInfo(String.format("Unrecognized http protocol upgrade: %s", RequestedUpgrade), "HttpRequestRoutingPump", "chooseRoute", "upgrading request");
+                        context.Responder = context.Server.Error404ResponderFactory.create();
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex) {
+                logInfo(ex.getMessage(), "HttpRequestRoutingPump", "chooseRoute", "creating a responder instance for upgrade request");
+            }
+            return;
+        }
         String url = context.Request.getUrl();
         for(Map.Entry<Pattern, HttpResponder.Factory> route : context.Server.Routes.entrySet()) {
             if (route.getKey().matcher(url).matches()) {

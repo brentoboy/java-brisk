@@ -5,11 +5,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.bflarsen.brisk.pumps.*;
 import com.bflarsen.brisk.responders.*;
@@ -24,9 +26,11 @@ public class HttpServer extends Thread {
 
     public int Port = 80;
     public final Map<Pattern, HttpResponder.Factory> Routes = new LinkedHashMap<>();
+    public final Map<String, WebSocketMessageHandler.Factory> MessageHandlers = new LinkedHashMap<>();
 
     public HttpResponder.Factory Error404ResponderFactory = DefaultError404Responder::new;
     public HttpResponder.Factory Error500ResponderFactory = DefaultError500Responder::new;
+    public HttpResponder.Factory WebSocketUpgradeResponderFactory = DefaultWebSocketUpgradeResponder::new;
 
     public boolean isClosing = false;
     public final LinkedBlockingQueue<Socket> IncomingRequests = new LinkedBlockingQueue<>();
@@ -35,12 +39,14 @@ public class HttpServer extends Thread {
     public final LinkedBlockingQueue<HttpContext> RoutedRequests = new LinkedBlockingQueue<>();
     public final LinkedBlockingQueue<HttpContext> ResponseReady = new LinkedBlockingQueue<>();
     public final LinkedBlockingQueue<HttpContext> DoneSending = new LinkedBlockingQueue<>();
+    public final LinkedBlockingQueue<WebSocketMessage> InboundWebSocketMessages = new LinkedBlockingQueue<>();
 
     private final HttpRequestParsingPump RequestParser = new HttpRequestParsingPump(this);
     private final HttpRequestRoutingPump RequestRouter = new HttpRequestRoutingPump(this);
     private final HttpResponseBuildingPump ResponseBuilder = new HttpResponseBuildingPump(this);
     private final HttpResponseSendingPump ResponseSender = new HttpResponseSendingPump(this);
     private final HttpContextCleanupPump ContextCleanup = new HttpContextCleanupPump(this);
+    private final WebSocketMessagePump WebSocketMessageHandler = new WebSocketMessagePump(this);
 
     public boolean DisplayErrorDetails = false;
 
@@ -57,6 +63,7 @@ public class HttpServer extends Thread {
     public int NumberOfResponseBuildingThreadsToCreate = 8;
     public int NumberOfResponseSendingThreadsToCreate = 8;
     public int NumberOfContextCleanupThreadsToCreate = 8;
+    public int NumberOfWebSocketMessageHandlingThreadsToCreate = 8;
 
     public final AutoConvert AutoConverter = new AutoConvert();
 
@@ -76,6 +83,7 @@ public class HttpServer extends Thread {
         this.ResponseBuilder.run();
         this.ResponseSender.run();
         this.ContextCleanup.run();
+        this.WebSocketMessageHandler.run();
 
         try (ServerSocket serverSocket = createServerSocket()) {
             logInfo("Listening on Port " + this.Port, CLASS_NAME, "run()", "Initializing");
@@ -246,5 +254,40 @@ public class HttpServer extends Thread {
 
     public void destroySessionObject(HttpSession session) {
         // override this if you need to cleanup resources you created in createSessionObject
+    }
+
+    public void onWebSocketOpened(WebSocketContext webSocketContext) {
+        logInfo("WebSocket Opened", "HttpServer", "onWebSocketOpened", webSocketContext.SessionId);
+    }
+
+    public void onWebSocketClosed(WebSocketContext webSocketContext) {
+        logInfo("WebSocket Closed", "HttpServer", "onWebSocketClosed", webSocketContext.SessionId);
+    }
+
+    public void handleWebSocketMessage(WebSocketMessage message) throws Exception {
+        if (message.IsText && message.Text != null) {
+            String lines[] = message.Text.split("\\r?\\n", -1);
+            if (lines.length >= 2) {
+                message.Target = lines[0];
+                message.UniqueId = lines[1];
+                message.Text = Arrays.stream(lines).skip(2).collect(Collectors.joining(System.lineSeparator()));
+                lines = null; // free up that memory baby
+                if (MessageHandlers.containsKey(message.Target)) {
+                    WebSocketMessageHandler handler = MessageHandlers.get(message.Target).create();
+                    try {
+                        handler.handle(message);
+                    }
+                    catch (Exception ex) {
+                        // what do we do with this?
+                    }
+                }
+            }
+            else {
+                // default handler
+            }
+        }
+        else {
+            // ???
+        }
     }
 }

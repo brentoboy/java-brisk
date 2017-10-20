@@ -2,6 +2,7 @@ package com.bflarsen.brisk.pumps;
 
 import com.bflarsen.brisk.HttpContext;
 import com.bflarsen.brisk.HttpServer;
+import com.bflarsen.brisk.HttpStatusCode;
 
 import java.net.SocketException;
 
@@ -48,7 +49,12 @@ public class HttpContextCleanupPump implements Runnable {
             try { context.ResponseStream.close(); }
             catch (Exception ex) {}
         }
-        if (context.Socket != null) {
+        if (context.Response.getStatusCode() == HttpStatusCode.SWITCHING_PROTOCOLS
+                && context.Response.getHeaders().containsKey("Sec-WebSocket-Accept")
+                ) {
+            // System.out.println("Socket allowed to persist as websocket!");
+        }
+        else if (context.Socket != null) {
 //            if (! context.Socket.isClosed()) {
 //                try {
 //                    context.Server.IncomingRequests.put(context.Socket);
@@ -58,7 +64,9 @@ public class HttpContextCleanupPump implements Runnable {
 //            else {
 //                context.Server.logHandler("Socket already closed, no recycling");
 //            }
-            try { context.Socket.close(); }
+            try {
+                context.Socket.close();
+            }
             catch (Exception ex) {
                 logEx(ex, "HttpContextCleanupPump", "cleanupContext", "context.Socket.close()");
             }
