@@ -26,7 +26,6 @@ public class HttpServer extends Thread {
 
     public int Port = 80;
     public final Map<Pattern, HttpResponder.Factory> Routes = new LinkedHashMap<>();
-    public final Map<String, WebSocketMessageHandler.Factory> MessageHandlers = new LinkedHashMap<>();
 
     public HttpResponder.Factory Error404ResponderFactory = DefaultError404Responder::new;
     public HttpResponder.Factory Error500ResponderFactory = DefaultError500Responder::new;
@@ -265,29 +264,6 @@ public class HttpServer extends Thread {
     }
 
     public void handleWebSocketMessage(WebSocketMessage message) throws Exception {
-        if (message.IsText && message.Text != null) {
-            String lines[] = message.Text.split("\\r?\\n", -1);
-            if (lines.length >= 2) {
-                message.Target = lines[0];
-                message.UniqueId = lines[1];
-                message.Text = Arrays.stream(lines).skip(2).collect(Collectors.joining(System.lineSeparator()));
-                lines = null; // free up that memory baby
-                if (MessageHandlers.containsKey(message.Target)) {
-                    WebSocketMessageHandler handler = MessageHandlers.get(message.Target).create();
-                    try {
-                        handler.handle(message);
-                    }
-                    catch (Exception ex) {
-                        // what do we do with this?
-                    }
-                }
-            }
-            else {
-                // default handler
-            }
-        }
-        else {
-            // ???
-        }
+        // override this if you do WebSockets
     }
 }
