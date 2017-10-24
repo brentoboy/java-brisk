@@ -36,6 +36,8 @@ public class WebSocketContext {
     public static final int CLOSED_DUE_TO_POLICY_VIOLATION = 1008;
     public static final int CLOSED_DUE_TO_MESSAGE_TOO_BIG = 1009;
 
+    public static final int MAX_UNSIGNED_SHORT = 0xFFFF;
+
     private final Socket Socket;
     public final HttpServer Server;
     public final HttpSession Session;
@@ -242,7 +244,7 @@ public class WebSocketContext {
                 if (message.Blob.length <= 125) {
                     stream.write((byte)message.Blob.length);
                 }
-                else if (message.Blob.length <= Short.MAX_VALUE) {
+                else if (message.Blob.length <= MAX_UNSIGNED_SHORT) {
                     stream.write((byte)126);
                     byte[] payloadLength = new byte[] {
                             (byte)(message.Blob.length >> 8),
@@ -253,10 +255,10 @@ public class WebSocketContext {
                 else {
                     stream.write((byte)127);
                     byte[] payloadLength = new byte[] {
-                            (byte)((long)message.Blob.length >> 56),
-                            (byte)((long)message.Blob.length >> 48),
-                            (byte)((long)message.Blob.length >> 40),
-                            (byte)((long)message.Blob.length >> 32),
+                            (byte)0,
+                            (byte)0,
+                            (byte)0,
+                            (byte)0,
                             (byte)(message.Blob.length >> 24),
                             (byte)(message.Blob.length >> 16),
                             (byte)(message.Blob.length >> 8),

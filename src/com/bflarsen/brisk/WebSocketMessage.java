@@ -10,6 +10,4 @@ public class WebSocketMessage {
     public byte[] Blob;
     public int OpCode;
     public Map<String, Object> WorkerThreadResources;
-    public String Target;
-    public String UniqueId;
 }
