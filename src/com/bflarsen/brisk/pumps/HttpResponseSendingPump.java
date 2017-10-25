@@ -128,7 +128,6 @@ public class HttpResponseSendingPump implements Runnable {
             catch (Exception ex) {
                 logEx(ex, "HttpResponseSendingPump", "sendResponse", "final flush");
             }
-            System.out.println("done");
         }
         catch (java.net.SocketException ex) {
             // so you had a socket error ... so what
