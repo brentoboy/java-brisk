@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.bflarsen.util.Logger.*;
@@ -39,6 +40,7 @@ public class WebSocketContext {
     public static final int MAX_UNSIGNED_SHORT = 0xFFFF;
 
     private final Socket Socket;
+    public final String Name;
     public final HttpServer Server;
     public final HttpSession Session;
     public final String SessionId;
@@ -54,6 +56,7 @@ public class WebSocketContext {
         this.Server = server;
         this.Session = session;
         this.SessionId = (session != null) ? session.UniqueID : null;
+        this.Name = UUID.randomUUID().toString();
     }
 
     public void Init() {
