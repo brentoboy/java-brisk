@@ -27,7 +27,7 @@ public class DefaultWebSocketUpgradeResponder implements HttpResponder {
                     || context.Request.getHeader("Request_SecWebSocketKey") == null
                     || context.Request.getHeader("Request_SecWebSocketVersion") == null
                     || !context.Request.getHeader("Request_Upgrade").equals("websocket")
-                    || !context.Request.getHeader("Request_Connection").equals("Upgrade")
+                    || !context.Request.getHeader("Request_Connection").contains("Upgrade")
                     || !context.Request.getHeader("Request_SecWebSocketVersion").equals("13")
             ) {
                 response = new SimpleStatusResponse(HttpStatusCode.BAD_REQUEST);
