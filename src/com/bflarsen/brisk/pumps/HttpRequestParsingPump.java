@@ -61,6 +61,19 @@ public class HttpRequestParsingPump implements Runnable {
         return new String(buffer);
     }
 
+    private static byte[] tryReadBlob(BufferedReader stream, int len) throws Exception {
+        char[] buffer = new char[len];
+        int bytesRead = stream.read(buffer);
+        if (bytesRead != len) {
+            logWarning(String.format("ContentLength = %d, and Actual Body Length = %d", len, bytesRead), "HttpRequestParsingPump", "tryReadBody", "reading incoming data");
+        }
+        byte[] blob = new byte[len];
+        for (int i = 0; i < len; i++) {
+            blob[i] = (byte)buffer[i];
+        }
+        return blob;
+    }
+
     public static void parseRequest(HttpContext context) throws Exception {
         if (context == null)
             throw new Exception("Empty Context object in parseRequest.");
@@ -254,6 +267,12 @@ public class HttpRequestParsingPump implements Runnable {
                     break;
                 }
             }
+        }
+        // some websocket versions have a key stashed in the body of the document
+        if (context.Request.Headers.containsKey("Request_SecWebSocketKey1")
+                && context.Request.Headers.containsKey("Request_SecWebSocketKey2")
+        ) {
+            context.Request.RawBody = tryReadBlob(context.RequestStream, 8);
         }
     }
 

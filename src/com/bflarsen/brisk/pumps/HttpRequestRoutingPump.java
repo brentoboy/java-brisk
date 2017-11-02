@@ -36,7 +36,7 @@ public class HttpRequestRoutingPump implements Runnable {
         String RequestedUpgrade = context.Request.getHeader("Request_Upgrade");
         if (RequestedUpgrade != null) {
             try {
-                switch (RequestedUpgrade) {
+                switch (RequestedUpgrade.toLowerCase()) {
                     case "websocket": {
                         context.Responder = context.Server.WebSocketUpgradeResponderFactory.create();
                         return;

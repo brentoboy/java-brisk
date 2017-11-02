@@ -14,6 +14,7 @@ public class HttpRequest {
     public final Map<String, String> Cookies = new HashMap<>();
     public final Map<String, Object> Params = new HashMap<>();
     public final Map<String, String> Headers = new HashMap<>();
+    public byte[] RawBody;
 
     public Object getParam(String... keys) {
         Map<String, Object> map = Params;

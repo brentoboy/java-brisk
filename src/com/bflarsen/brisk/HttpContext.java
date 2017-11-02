@@ -51,7 +51,7 @@ public class HttpContext {
     public HttpContext(HttpServer server, Socket socket) throws Exception {
         this(server);
         this.Socket = socket;
-        this.RequestStream = new BufferedReader(new InputStreamReader(new NoCloseInputStream(socket.getInputStream()), "utf-8"));
+        this.RequestStream = new BufferedReader(new InputStreamReader(new NoCloseInputStream(socket.getInputStream()), "ISO-8859-1"));// "utf-8"));
         if (socket instanceof SSLSocket) {
             this.Request.Protocol = "https";
         }
