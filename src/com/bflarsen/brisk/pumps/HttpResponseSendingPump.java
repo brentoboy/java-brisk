@@ -73,29 +73,33 @@ public class HttpResponseSendingPump implements Runnable {
             }
 
             // send the first line ... something like this :  "HTTP/1.1 200 OK"
-            streamWriter.println(String.format(
+            streamWriter.print(String.format(
                     "%s %d %s"
                     , response.getHttpVersion()
                     , response.getStatusCode()
                     , response.getStatusDescription()
             ));
+            streamWriter.print("\r\n");
 
             // send all the header lines ... something like this: "Header-Name: header-value"
             for (Map.Entry<String, String> header : response.getHeaders().entrySet()) {
-                streamWriter.println(String.format(
+                streamWriter.print(String.format(
                         "%s: %s"
                         , header.getKey()
                         , header.getValue()
                 ));
+                streamWriter.print("\r\n");
             }
 
             // send the cookies
             for (HttpCookie cookie : context.SendCookies) {
-                streamWriter.println(cookie.getResponseLine());
+                streamWriter.print(cookie.getResponseLine());
+                streamWriter.print("\r\n");
+
             }
 
             // send a blank line signifying "</end headers>"
-            streamWriter.println("");
+            streamWriter.print("\r\n");
             streamWriter.flush();
 
             // record the time to first byte

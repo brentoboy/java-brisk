@@ -18,7 +18,7 @@ import static com.bflarsen.util.Logger.*;
 
 public class WebSocketContext {
 
-    public class FailConnectionException extends Exception {
+    public static class FailConnectionException extends Exception {
         public final int Code;
         public FailConnectionException(int code) { super(String.format("Fail Connection: %d", code)); this.Code = code; }
     }
@@ -310,12 +310,18 @@ public class WebSocketContext {
 
     }
 
-    private static byte[] readBytes(InputStream stream, int count) throws IOException {
+    private static byte[] readBytes(InputStream stream, int count) throws IOException, FailConnectionException {
         byte[] buffer = new byte[count];
         int totalBytesRead = 0;
+        int loopCount = 0;
         while (totalBytesRead < count) {
+            loopCount++;
             try {
-                totalBytesRead += stream.read(buffer, totalBytesRead, count - totalBytesRead);
+                int bytesRead = stream.read(buffer, totalBytesRead, count - totalBytesRead);
+                if (bytesRead < 0) {
+                    throw new FailConnectionException(CLOSED_DUE_TO_RECEIVING_UNACCEPTABLE_DATA);
+                }
+                totalBytesRead += bytesRead;
             }
             catch (SocketTimeoutException ex) {
                 // I don't care, long periods between transmissions are perfectly acceptable
