@@ -41,6 +41,12 @@ public class DefaultWebSocketUpgradeResponder implements HttpResponder {
                 response.setHeader("Connection", "Upgrade");
                 response.setHeader("Sec-WebSocket-Accept", generateWebSocketAcceptCode(context.Request.getHeader("Request_SecWebSocketKey")));
                 WebSocketContext webSocketContext = new WebSocketContext(context.Socket, context.Server, context.Session, "13");
+                if (context.Request.getHeader("Request_SecWebSocketExtensions") != null
+                        && context.Request.getHeader("Request_SecWebSocketExtensions").contains("permessage-deflate")
+                ) {
+                    response.setHeader("Sec-WebSocket-Extensions", "permessage-deflate");
+                    webSocketContext.isDeflateEnabled = true;
+                }
                 context.Server.onWebSocketOpened(webSocketContext);
                 if (webSocketContext.Protocol != null) {
                     response.setHeader("Sec-WebSocket-Protocol", webSocketContext.Protocol);

@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import static com.bflarsen.util.Logger.*;
 
@@ -52,6 +54,7 @@ public class WebSocketContext {
     private final LinkedBlockingQueue<WebSocketMessage> SendQueue = new LinkedBlockingQueue<>();
     private WebSocketMessage incomingMessage = null;
     private static final WebSocketMessage STOP_MESSAGE = new WebSocketMessage();
+    public boolean isDeflateEnabled = false;
 
     public WebSocketContext(Socket socket, HttpServer server, HttpSession session, String version) {
         this.Socket = socket;
@@ -189,6 +192,8 @@ public class WebSocketContext {
     public void ReadThreadProc_13() throws Exception {
         final InputStream stream = this.Socket.getInputStream();
         final List<byte[]> fragments = new ArrayList<>();
+        final Inflater inflater = (this.isDeflateEnabled) ? new Inflater() : null;
+        final byte[] inflateTail = new byte[] {(byte)0x00, (byte)0x00, (byte)0xFF, (byte)0xFF};
         Integer MessageEncoding = null; // OP_TEXT_FRAME or OP_BINARY_FRAME, depending on first frame
 
         main_loop: while (true) {
@@ -203,7 +208,7 @@ public class WebSocketContext {
             int payloadLength = 0x7F & frameHeader[1];   // bin 01111111
 
             // per RFC6455, if rsv bits are set and no extension in use that wants them, we must fail
-            if (rsv1 || rsv2 || rsv3) {
+            if (rsv2 || rsv3 || (rsv1 && !isDeflateEnabled)) {
                 throw new FailConnectionException(CLOSED_DUE_TO_PROTOCOL_ERROR);
             }
 
@@ -249,6 +254,20 @@ public class WebSocketContext {
             // unmask it
             for (int i = 0; i < payloadLength; i++) {
                 payload[i] = (byte) (payload[i] ^ maskingKey[i % 4]);
+            }
+
+            // permessage-deflate action
+            if (isDeflateEnabled && rsv1) {
+                inflater.setInput(payload);
+                inflater.setInput(inflateTail);
+                ByteArrayOutputStream expandableByteArray = new ByteArrayOutputStream(payload.length*4); // you've got to start with some size, so compressed size *4 seems reasonable
+                byte[] tempBuffer = new byte[1024];
+                while (!inflater.finished()) {
+                    int count = inflater.inflate(tempBuffer);
+                    expandableByteArray.write(tempBuffer, 0, count);
+                }
+                expandableByteArray.close();
+                payload = expandableByteArray.toByteArray();
             }
 
             // decide what to do with it now that we have it
