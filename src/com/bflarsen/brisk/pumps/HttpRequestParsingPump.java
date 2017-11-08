@@ -159,9 +159,11 @@ public class HttpRequestParsingPump implements Runnable {
                     String[] allCookies = value.split(";");
                     for (String cookie : allCookies) {
                         int splitCookieAt = cookie.indexOf('=');
-                        String cookieName = cookie.substring(0, splitCookieAt).trim();
-                        String cookieValue = cookie.substring(splitCookieAt + 1).trim();
-                        context.Request.Cookies.put(cookieName, cookieValue);
+                        if (splitCookieAt != -1) {
+                            String cookieName = cookie.substring(0, splitCookieAt).trim();
+                            String cookieValue = cookie.substring(splitCookieAt + 1).trim();
+                            context.Request.Cookies.put(cookieName, cookieValue);
+                        }
                     }
                 }
                 else if (context.Request.Headers.containsKey(key)) {
