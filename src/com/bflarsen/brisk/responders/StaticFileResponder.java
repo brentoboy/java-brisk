@@ -12,7 +12,7 @@ import java.util.TimeZone;
 
 public class StaticFileResponder implements HttpResponder {
     public static SimpleDateFormat getModifiedSinceDateParser() {
-        SimpleDateFormat parser = new SimpleDateFormat("dd MMM yyyy HH:mm:ss zzz");
+        SimpleDateFormat parser = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
         parser.setTimeZone(TimeZone.getTimeZone("GMT"));
         return parser;
     }
