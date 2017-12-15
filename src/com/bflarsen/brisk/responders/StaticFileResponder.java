@@ -11,10 +11,17 @@ import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
 public class StaticFileResponder implements HttpResponder {
-    public static SimpleDateFormat getModifiedSinceDateParser() {
-        SimpleDateFormat parser = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-        parser.setTimeZone(TimeZone.getTimeZone("GMT"));
-        return parser;
+    public static long parseHttpFormattedDate(String formattedDate) throws java.text.ParseException {
+        try {
+            final SimpleDateFormat parser = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+            parser.setTimeZone(TimeZone.getTimeZone("GMT"));
+            return parser.parse(formattedDate).getTime();
+        }
+        catch(Exception ex) {
+            final SimpleDateFormat parser = new SimpleDateFormat("dd MMM yyyy HH:mm:ss zzz");
+            parser.setTimeZone(TimeZone.getTimeZone("GMT"));
+            return parser.parse(formattedDate).getTime();
+        }
     }
 
     public Path BasePath;
@@ -56,7 +63,7 @@ public class StaticFileResponder implements HttpResponder {
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             try {
                 // I give 1000 milliseconds of leeway here, because the http protocol passes a date rounded to the second.
-                modifiedSince = getModifiedSinceDateParser().parse(ifModifiedSince).getTime() + 1000;
+                modifiedSince = parseHttpFormattedDate(ifModifiedSince) + 1000;
             }
             catch (Exception ex) {
                 logEx(ex, "StaticFileResponder", "respond", "parsing ModifiedSince header: '" + ifModifiedSince + "'");
